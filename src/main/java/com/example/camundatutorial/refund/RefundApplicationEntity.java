@@ -1,5 +1,7 @@
 package com.example.camundatutorial.refund;
 
+import com.example.camundatutorial.governance.Sensitive;
+import com.example.camundatutorial.governance.SensitiveType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -35,10 +37,12 @@ public class RefundApplicationEntity {
     private String processInstanceId;
 
     /** Applicant first name from the REST request. */
+    @Sensitive(SensitiveType.PII)
     @Comment("Applicant first name submitted via the refund application REST API")
     private String firstName;
 
     /** Applicant last name from the REST request. */
+    @Sensitive(SensitiveType.PII)
     @Comment("Applicant last name submitted via the refund application REST API")
     private String lastName;
 
@@ -63,10 +67,12 @@ public class RefundApplicationEntity {
     private String status;
 
     /** Auto-generated or reviewer comment. */
+    @Sensitive(SensitiveType.PII)
     @Comment("Review comment from automatic approval or from the manual reviewer user task")
     private String reviewComment;
 
     /** Message sent to the taxpayer. */
+    @Sensitive(SensitiveType.PII)
     @Column(length = 1000)
     @Comment("Notification message content sent to the taxpayer after the refund decision")
     private String notificationMessage;
