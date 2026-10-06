@@ -22,7 +22,7 @@ app:
     protection:
       enabled: true
       # MASK → "********" | OMIT → drop property / map as null
-      response-mode: MASK
+      response-mode: OMIT
       mask-value: "********"
       # Default threshold is PII only; add SENSITIVE and/or INTERNAL to widen
       protected-types:

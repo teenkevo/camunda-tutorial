@@ -16,10 +16,13 @@ public class SensitivityJacksonConfiguration {
     ) {
         SensitiveAnnotationIntrospector introspector =
                 new SensitiveAnnotationIntrospector(classifier, properties, masker);
+        SensitiveBeanSerializerModifier omitModifier =
+                new SensitiveBeanSerializerModifier(classifier, properties);
         return builder -> builder.modulesToInstall(new SimpleModule("sensitivityProtection") {
             @Override
             public void setupModule(SetupContext context) {
                 context.appendAnnotationIntrospector(introspector);
+                context.addBeanSerializerModifier(omitModifier);
             }
         });
     }

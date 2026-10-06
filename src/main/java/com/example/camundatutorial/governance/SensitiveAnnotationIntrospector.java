@@ -1,15 +1,12 @@
 package com.example.camundatutorial.governance;
 
 import com.fasterxml.jackson.databind.introspect.Annotated;
-import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.NopAnnotationIntrospector;
 
 /**
- * Jackson safety net: omits or masks properties marked {@link Sensitive}
- * when their type is within the configured protection threshold.
- * <p>
- * Chosen over a type-specific serializer so protection is annotation-driven
- * and works for any property Java type.
+ * Jackson serialization safety net for {@link Sensitive} fields in MASK mode.
+ * OMIT is handled by {@link SensitiveBeanSerializerModifier} so request deserialization
+ * is never affected.
  */
 public class SensitiveAnnotationIntrospector extends NopAnnotationIntrospector {
 
@@ -25,17 +22,6 @@ public class SensitiveAnnotationIntrospector extends NopAnnotationIntrospector {
         this.classifier = classifier;
         this.properties = properties;
         this.masker = masker;
-    }
-
-    @Override
-    public boolean hasIgnoreMarker(AnnotatedMember member) {
-        if (!properties.isEnabled()) {
-            return false;
-        }
-        if (properties.getResponseMode() != SensitivityProtectionMode.OMIT) {
-            return false;
-        }
-        return classifier.isProtected(member);
     }
 
     @Override

@@ -54,10 +54,13 @@ class SensitivityProtectionTest {
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         SensitiveAnnotationIntrospector introspector =
                 new SensitiveAnnotationIntrospector(classifier, properties, masker);
+        SensitiveBeanSerializerModifier omitModifier =
+                new SensitiveBeanSerializerModifier(classifier, properties);
         mapper.registerModule(new SimpleModule("sensitivityProtection") {
             @Override
             public void setupModule(SetupContext context) {
                 context.appendAnnotationIntrospector(introspector);
+                context.addBeanSerializerModifier(omitModifier);
             }
         });
         return mapper;
@@ -131,6 +134,34 @@ class SensitivityProtectionTest {
         assertThat(json).doesNotContain("name");
         assertThat(json).doesNotContain("John Doe");
         assertThat(json).contains("\"safe\":\"ok\"");
+    }
+
+    @Test
+    void omitMode_stillDeserializesInboundPii() throws Exception {
+        properties.setResponseMode(SensitivityProtectionMode.OMIT);
+        objectMapper = createObjectMapper();
+
+        String body = "{\"firstName\":\"Ada\",\"lastName\":\"Lovelace\"}";
+        com.example.camundatutorial.refund.RefundApplicationRequest request =
+                objectMapper.readValue(body, com.example.camundatutorial.refund.RefundApplicationRequest.class);
+
+        assertThat(request.getFirstName()).isEqualTo("Ada");
+        assertThat(request.getLastName()).isEqualTo("Lovelace");
+
+        com.example.camundatutorial.refund.RefundApplicationStartResponse response =
+                new com.example.camundatutorial.refund.RefundApplicationStartResponse();
+        response.setProcessInstanceId("proc-1");
+        response.setProcessDefinitionKey("refund-application");
+        response.setFirstName(request.getFirstName());
+        response.setLastName(request.getLastName());
+        response.setMessage("ok");
+
+        String outbound = objectMapper.writeValueAsString(response);
+        assertThat(outbound).doesNotContain("Ada");
+        assertThat(outbound).doesNotContain("Lovelace");
+        assertThat(outbound).doesNotContain("firstName");
+        assertThat(outbound).contains("\"processInstanceId\":\"proc-1\"");
+        assertThat(outbound).contains("\"message\":\"ok\"");
     }
 
     @Test
