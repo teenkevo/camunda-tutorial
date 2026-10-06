@@ -89,9 +89,6 @@ public class SensitivityClassifier {
         } else {
             return methodName;
         }
-        if (base.isEmpty()) {
-            return methodName;
-        }
         return Character.toLowerCase(base.charAt(0)) + base.substring(1);
     }
 

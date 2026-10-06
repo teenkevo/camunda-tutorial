@@ -2,6 +2,8 @@ package com.example.camundatutorial.governance;
 
 import java.lang.reflect.Field;
 import java.util.regex.Pattern;
+
+import jakarta.annotation.Nonnull;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -23,15 +25,15 @@ public class SensitiveColumnCommentIntegrator implements Integrator {
     private static final Logger log = LoggerFactory.getLogger(SensitiveColumnCommentIntegrator.class);
 
     private static final Pattern LEADING_SENSITIVITY_TAG = Pattern.compile(
-            "^\\[(" + String.join("|", SensitiveType.names()) + ")\\]\\s*",
+            "^\\[(" + String.join("|", SensitiveType.names()) + ")]\\s*",
             Pattern.CASE_INSENSITIVE
     );
 
     @Override
     public void integrate(
             Metadata metadata,
-            BootstrapContext bootstrapContext,
-            SessionFactoryImplementor sessionFactory
+            @Nonnull BootstrapContext bootstrapContext,
+            @Nonnull SessionFactoryImplementor sessionFactory
     ) {
         for (PersistentClass persistentClass : metadata.getEntityBindings()) {
             Class<?> mappedClass = persistentClass.getMappedClass();
@@ -91,8 +93,8 @@ public class SensitiveColumnCommentIntegrator implements Integrator {
 
     @Override
     public void disintegrate(
-            SessionFactoryImplementor sessionFactory,
-            SessionFactoryServiceRegistry serviceRegistry
+            @Nonnull SessionFactoryImplementor sessionFactory,
+            @Nonnull SessionFactoryServiceRegistry serviceRegistry
     ) {
         // no-op
     }

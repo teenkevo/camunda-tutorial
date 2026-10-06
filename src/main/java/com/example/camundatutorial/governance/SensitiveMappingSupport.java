@@ -2,6 +2,7 @@ package com.example.camundatutorial.governance;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -93,9 +94,7 @@ public class SensitiveMappingSupport {
         List<Field> fields = new ArrayList<>();
         Class<?> current = type;
         while (current != null && current != Object.class) {
-            for (Field field : current.getDeclaredFields()) {
-                fields.add(field);
-            }
+            fields.addAll(Arrays.asList(current.getDeclaredFields()));
             current = current.getSuperclass();
         }
         return fields;

@@ -31,3 +31,25 @@ bin/
 
 ### Maven ###
 target/
+
+### IntelliJ module/user files ###
+*.iml
+*.iws
+*.ipr
+
+### Logs ###
+logs/
+*.log
+
+### H2 file databases (if datasource is switched from mem: to file:) ###
+*.mv.db
+*.trace.db
+
+### Local environment / secrets ###
+.env
+.env.*
+application-local.yaml
+application-local.yml
+
+### IntelliJ project settings ###
+.idea/
