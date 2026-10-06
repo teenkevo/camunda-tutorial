@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_refund_application"
+                  targetNamespace="http://camunda.org/examples"
+                  exporter="Camunda Modeler"
+                  exporterVersion="5.0.0">
+  <bpmn:process id="refund-application" name="Refund Application" isExecutable="true" camunda:historyTimeToLive="30">
+
+    <bpmn:startEvent id="StartEvent" name="Refund submitted">
+      <bpmn:outgoing>Flow_to_create</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="CreateApplication" name="Create application" camunda:delegateExpression="${createApplicationDelegate}">
+      <bpmn:incoming>Flow_to_create</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_set_drn</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="SetDrnAndStation" name="Set DRN and station" camunda:delegateExpression="${setDrnAndStationDelegate}">
+      <bpmn:incoming>Flow_to_set_drn</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_check_risk</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="CheckRiskLevel" name="Check taxpayer risk level" camunda:delegateExpression="${checkRiskLevelDelegate}">
+      <bpmn:incoming>Flow_to_check_risk</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_risk_gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="RiskGateway" name="Risk level?">
+      <bpmn:incoming>Flow_to_risk_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_low_risk</bpmn:outgoing>
+      <bpmn:outgoing>Flow_manual_review</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="AutoApprove" name="Auto-approve (low risk)" camunda:delegateExpression="${autoApproveDelegate}">
+      <bpmn:incoming>Flow_low_risk</bpmn:incoming>
+      <bpmn:outgoing>Flow_auto_to_notify</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:userTask id="ReviewRefund" name="Review refund application" camunda:assignee="demo">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="approved" label="Approve refund?" type="boolean" defaultValue="true" />
+          <camunda:formField id="reviewComment" label="Review comment" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_manual_review</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_decision_gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="DecisionGateway" name="Decision?">
+      <bpmn:incoming>Flow_to_decision_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_manual_approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_manual_rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="NotifyTaxpayerApproved" name="Notify taxpayer (approved)" camunda:delegateExpression="${notifyTaxpayerDelegate}">
+      <bpmn:incoming>Flow_auto_to_notify</bpmn:incoming>
+      <bpmn:incoming>Flow_manual_approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_approved_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="NotifyTaxpayerRejected" name="Notify taxpayer (rejected)" camunda:delegateExpression="${notifyTaxpayerDelegate}">
+      <bpmn:incoming>Flow_manual_rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_rejected_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent" name="Refund decision completed">
+      <bpmn:incoming>Flow_approved_to_end</bpmn:incoming>
+      <bpmn:incoming>Flow_rejected_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_to_create" sourceRef="StartEvent" targetRef="CreateApplication" />
+    <bpmn:sequenceFlow id="Flow_to_set_drn" sourceRef="CreateApplication" targetRef="SetDrnAndStation" />
+    <bpmn:sequenceFlow id="Flow_to_check_risk" sourceRef="SetDrnAndStation" targetRef="CheckRiskLevel" />
+    <bpmn:sequenceFlow id="Flow_to_risk_gateway" sourceRef="CheckRiskLevel" targetRef="RiskGateway" />
+    <bpmn:sequenceFlow id="Flow_low_risk" name="Low" sourceRef="RiskGateway" targetRef="AutoApprove">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${riskLevel == 'low'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_manual_review" name="Medium / High" sourceRef="RiskGateway" targetRef="ReviewRefund">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${riskLevel == 'medium' || riskLevel == 'high'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_auto_to_notify" sourceRef="AutoApprove" targetRef="NotifyTaxpayerApproved" />
+    <bpmn:sequenceFlow id="Flow_to_decision_gateway" sourceRef="ReviewRefund" targetRef="DecisionGateway" />
+    <bpmn:sequenceFlow id="Flow_manual_approved" name="Approved" sourceRef="DecisionGateway" targetRef="NotifyTaxpayerApproved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_manual_rejected" name="Rejected" sourceRef="DecisionGateway" targetRef="NotifyTaxpayerRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_approved_to_end" sourceRef="NotifyTaxpayerApproved" targetRef="EndEvent" />
+    <bpmn:sequenceFlow id="Flow_rejected_to_end" sourceRef="NotifyTaxpayerRejected" targetRef="EndEvent" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="refund-application">
+      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CreateApplication_di" bpmnElement="CreateApplication">
+        <dc:Bounds x="240" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SetDrnAndStation_di" bpmnElement="SetDrnAndStation">
+        <dc:Bounds x="410" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckRiskLevel_di" bpmnElement="CheckRiskLevel">
+        <dc:Bounds x="580" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RiskGateway_di" bpmnElement="RiskGateway" isMarkerVisible="true">
+        <dc:Bounds x="755" y="95" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AutoApprove_di" bpmnElement="AutoApprove">
+        <dc:Bounds x="860" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReviewRefund_di" bpmnElement="ReviewRefund">
+        <dc:Bounds x="860" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DecisionGateway_di" bpmnElement="DecisionGateway" isMarkerVisible="true">
+        <dc:Bounds x="1035" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NotifyTaxpayerApproved_di" bpmnElement="NotifyTaxpayerApproved">
+        <dc:Bounds x="1140" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NotifyTaxpayerRejected_di" bpmnElement="NotifyTaxpayerRejected">
+        <dc:Bounds x="1140" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_di" bpmnElement="EndEvent">
+        <dc:Bounds x="1312" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_create_di" bpmnElement="Flow_to_create">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_set_drn_di" bpmnElement="Flow_to_set_drn">
+        <di:waypoint x="360" y="120" />
+        <di:waypoint x="410" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_check_risk_di" bpmnElement="Flow_to_check_risk">
+        <di:waypoint x="530" y="120" />
+        <di:waypoint x="580" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_risk_gateway_di" bpmnElement="Flow_to_risk_gateway">
+        <di:waypoint x="700" y="120" />
+        <di:waypoint x="755" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_low_risk_di" bpmnElement="Flow_low_risk">
+        <di:waypoint x="805" y="120" />
+        <di:waypoint x="860" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_manual_review_di" bpmnElement="Flow_manual_review">
+        <di:waypoint x="780" y="145" />
+        <di:waypoint x="780" y="240" />
+        <di:waypoint x="860" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_auto_to_notify_di" bpmnElement="Flow_auto_to_notify">
+        <di:waypoint x="980" y="120" />
+        <di:waypoint x="1140" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_decision_gateway_di" bpmnElement="Flow_to_decision_gateway">
+        <di:waypoint x="980" y="240" />
+        <di:waypoint x="1035" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_manual_approved_di" bpmnElement="Flow_manual_approved">
+        <di:waypoint x="1060" y="215" />
+        <di:waypoint x="1060" y="120" />
+        <di:waypoint x="1140" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_manual_rejected_di" bpmnElement="Flow_manual_rejected">
+        <di:waypoint x="1085" y="240" />
+        <di:waypoint x="1140" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_approved_to_end_di" bpmnElement="Flow_approved_to_end">
+        <di:waypoint x="1260" y="120" />
+        <di:waypoint x="1330" y="120" />
+        <di:waypoint x="1330" y="162" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_rejected_to_end_di" bpmnElement="Flow_rejected_to_end">
+        <di:waypoint x="1260" y="240" />
+        <di:waypoint x="1330" y="240" />
+        <di:waypoint x="1330" y="198" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_taxpayer_registration"
+                  targetNamespace="http://camunda.org/examples"
+                  exporter="Camunda Modeler"
+                  exporterVersion="5.0.0">
+  <bpmn:process id="taxpayer-registration" name="Taxpayer Registration" isExecutable="true" camunda:historyTimeToLive="30">
+
+    <bpmn:startEvent id="StartEvent" name="Start registration">
+      <bpmn:outgoing>Flow_to_capture</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="CaptureTaxpayerInfo" name="Capture taxpayer details" camunda:assignee="demo">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="taxpayerName" label="Taxpayer name" type="string">
+            <camunda:validation>
+              <camunda:constraint name="required" />
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="nationalId" label="National / Business ID" type="string">
+            <camunda:validation>
+              <camunda:constraint name="required" />
+            </camunda:validation>
+          </camunda:formField>
+          <camunda:formField id="taxTypesInput" label="Tax types (comma-separated: VAT, PAYE, CIT)" type="string">
+            <camunda:validation>
+              <camunda:constraint name="required" />
+            </camunda:validation>
+          </camunda:formField>
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_capture</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_prepare</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="PrepareTaxTypes" name="Prepare tax type list" camunda:delegateExpression="${prepareTaxTypesDelegate}">
+      <bpmn:incoming>Flow_to_prepare</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_validate</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="ValidateTaxpayer" name="Validate taxpayer data" camunda:delegateExpression="${validateTaxpayerDelegate}">
+      <bpmn:incoming>Flow_to_validate</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_valid_gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="ValidGateway" name="Data valid?">
+      <bpmn:incoming>Flow_to_valid_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_valid</bpmn:outgoing>
+      <bpmn:outgoing>Flow_invalid</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="RegisterTaxType" name="Register tax type" camunda:delegateExpression="${registerTaxTypeDelegate}">
+      <bpmn:incoming>Flow_valid</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_review</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="taxTypes" camunda:elementVariable="taxType" />
+    </bpmn:serviceTask>
+
+    <bpmn:userTask id="ReviewRegistration" name="Review and approve registration" camunda:assignee="demo">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="approved" label="Approve registration?" type="boolean" defaultValue="true" />
+          <camunda:formField id="reviewComment" label="Review comment" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_review</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_approval_gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="ApprovalGateway" name="Approved?">
+      <bpmn:incoming>Flow_to_approval_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="FinalizeRegistration" name="Issue TIN and activate" camunda:delegateExpression="${finalizeRegistrationDelegate}">
+      <bpmn:incoming>Flow_approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_completed</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndCompleted" name="Registration completed">
+      <bpmn:incoming>Flow_to_completed</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndRejected" name="Registration rejected">
+      <bpmn:incoming>Flow_rejected</bpmn:incoming>
+      <bpmn:incoming>Flow_invalid</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_to_capture" sourceRef="StartEvent" targetRef="CaptureTaxpayerInfo" />
+    <bpmn:sequenceFlow id="Flow_to_prepare" sourceRef="CaptureTaxpayerInfo" targetRef="PrepareTaxTypes" />
+    <bpmn:sequenceFlow id="Flow_to_validate" sourceRef="PrepareTaxTypes" targetRef="ValidateTaxpayer" />
+    <bpmn:sequenceFlow id="Flow_to_valid_gateway" sourceRef="ValidateTaxpayer" targetRef="ValidGateway" />
+    <bpmn:sequenceFlow id="Flow_valid" name="Yes" sourceRef="ValidGateway" targetRef="RegisterTaxType">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${valid == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_invalid" name="No" sourceRef="ValidGateway" targetRef="EndRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${valid == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_to_review" sourceRef="RegisterTaxType" targetRef="ReviewRegistration" />
+    <bpmn:sequenceFlow id="Flow_to_approval_gateway" sourceRef="ReviewRegistration" targetRef="ApprovalGateway" />
+    <bpmn:sequenceFlow id="Flow_approved" name="Approved" sourceRef="ApprovalGateway" targetRef="FinalizeRegistration">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_rejected" name="Rejected" sourceRef="ApprovalGateway" targetRef="EndRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_to_completed" sourceRef="FinalizeRegistration" targetRef="EndCompleted" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="taxpayer-registration">
+      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CaptureTaxpayerInfo_di" bpmnElement="CaptureTaxpayerInfo">
+        <dc:Bounds x="240" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PrepareTaxTypes_di" bpmnElement="PrepareTaxTypes">
+        <dc:Bounds x="410" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ValidateTaxpayer_di" bpmnElement="ValidateTaxpayer">
+        <dc:Bounds x="580" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ValidGateway_di" bpmnElement="ValidGateway" isMarkerVisible="true">
+        <dc:Bounds x="755" y="95" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RegisterTaxType_di" bpmnElement="RegisterTaxType">
+        <dc:Bounds x="860" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReviewRegistration_di" bpmnElement="ReviewRegistration">
+        <dc:Bounds x="1030" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ApprovalGateway_di" bpmnElement="ApprovalGateway" isMarkerVisible="true">
+        <dc:Bounds x="1205" y="95" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FinalizeRegistration_di" bpmnElement="FinalizeRegistration">
+        <dc:Bounds x="1300" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndCompleted_di" bpmnElement="EndCompleted">
+        <dc:Bounds x="1472" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndRejected_di" bpmnElement="EndRejected">
+        <dc:Bounds x="1212" y="212" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_capture_di" bpmnElement="Flow_to_capture">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_prepare_di" bpmnElement="Flow_to_prepare">
+        <di:waypoint x="360" y="120" />
+        <di:waypoint x="410" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_validate_di" bpmnElement="Flow_to_validate">
+        <di:waypoint x="530" y="120" />
+        <di:waypoint x="580" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_valid_gateway_di" bpmnElement="Flow_to_valid_gateway">
+        <di:waypoint x="700" y="120" />
+        <di:waypoint x="755" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_valid_di" bpmnElement="Flow_valid">
+        <di:waypoint x="805" y="120" />
+        <di:waypoint x="860" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_invalid_di" bpmnElement="Flow_invalid">
+        <di:waypoint x="780" y="145" />
+        <di:waypoint x="780" y="230" />
+        <di:waypoint x="1212" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_review_di" bpmnElement="Flow_to_review">
+        <di:waypoint x="980" y="120" />
+        <di:waypoint x="1030" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_approval_gateway_di" bpmnElement="Flow_to_approval_gateway">
+        <di:waypoint x="1150" y="120" />
+        <di:waypoint x="1205" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_approved_di" bpmnElement="Flow_approved">
+        <di:waypoint x="1255" y="120" />
+        <di:waypoint x="1300" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_rejected_di" bpmnElement="Flow_rejected">
+        <di:waypoint x="1230" y="145" />
+        <di:waypoint x="1230" y="212" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_completed_di" bpmnElement="Flow_to_completed">
+        <di:waypoint x="1420" y="120" />
+        <di:waypoint x="1472" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
