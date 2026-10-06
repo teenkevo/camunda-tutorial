@@ -25,7 +25,7 @@ public class TaxpayerRegistrationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Object> start(@RequestBody TaxpayerRegistrationRequest request) {
+    public TaxpayerRegistrationStartResponse start(@RequestBody TaxpayerRegistrationRequest request) {
         if (request.getTaxpayerName() == null || request.getTaxpayerName().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "taxpayerName is required");
         }
@@ -50,11 +50,11 @@ public class TaxpayerRegistrationController {
                 variables
         );
 
-        return Map.of(
-                "processInstanceId", instance.getId(),
-                "processDefinitionKey", "taxpayer-registration",
-                "taxpayerName", request.getTaxpayerName().trim(),
-                "taxTypes", request.getTaxTypes()
-        );
+        TaxpayerRegistrationStartResponse response = new TaxpayerRegistrationStartResponse();
+        response.setProcessInstanceId(instance.getId());
+        response.setProcessDefinitionKey("taxpayer-registration");
+        response.setTaxpayerName(request.getTaxpayerName().trim());
+        response.setTaxTypes(request.getTaxTypes());
+        return response;
     }
 }

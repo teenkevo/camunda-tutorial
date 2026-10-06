@@ -2,6 +2,7 @@ package com.example.camundatutorial.refund;
 
 import com.example.camundatutorial.governance.Sensitive;
 import com.example.camundatutorial.governance.SensitiveType;
+import com.example.camundatutorial.governance.SensitivitySupport;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -88,4 +89,9 @@ public class RefundApplicationEntity {
     /** When the row was last changed. */
     @Comment("Timestamp when the refund application row was last updated")
     private Instant updatedAt;
+
+    @Override
+    public String toString() {
+        return SensitivitySupport.sensitiveToString(this);
+    }
 }

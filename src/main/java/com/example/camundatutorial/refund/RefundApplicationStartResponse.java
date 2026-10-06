@@ -1,21 +1,23 @@
-package com.example.camundatutorial.taxpayer;
+package com.example.camundatutorial.refund;
 
 import com.example.camundatutorial.governance.Sensitive;
 import com.example.camundatutorial.governance.SensitiveType;
 import com.example.camundatutorial.governance.SensitivitySupport;
-import java.util.List;
 import lombok.Data;
 
 @Data
-public class TaxpayerRegistrationRequest {
+public class RefundApplicationStartResponse {
+
+    private String processInstanceId;
+    private String processDefinitionKey;
 
     @Sensitive(SensitiveType.PII)
-    private String taxpayerName;
+    private String firstName;
 
     @Sensitive(SensitiveType.PII)
-    private String nationalId;
+    private String lastName;
 
-    private List<String> taxTypes;
+    private String message;
 
     @Override
     public String toString() {

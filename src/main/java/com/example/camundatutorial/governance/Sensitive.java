@@ -11,9 +11,13 @@ import java.lang.annotation.Target;
  * (logging redaction, API masking, Camunda guards) can inspect it.
  */
 @Documented
-@Target(ElementType.FIELD)
+@Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Sensitive {
 
+    /**
+     * Classification of this property. Type-level (whole-class) sensitivity is not supported;
+     * only fields/getters may be marked.
+     */
     SensitiveType value();
 }

@@ -7,13 +7,13 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class TaxpayerRegistrationRequest {
+public class TaxpayerRegistrationStartResponse {
+
+    private String processInstanceId;
+    private String processDefinitionKey;
 
     @Sensitive(SensitiveType.PII)
     private String taxpayerName;
-
-    @Sensitive(SensitiveType.PII)
-    private String nationalId;
 
     private List<String> taxTypes;
 

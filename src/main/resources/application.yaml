@@ -16,6 +16,19 @@ spring:
       hibernate:
         format_sql: true
 
+# Sensitivity / PII protection (OpenMetadata reads [PII] from DB remarks separately)
+app:
+  sensitivity:
+    protection:
+      enabled: true
+      # MASK → "********" | OMIT → drop property / map as null
+      response-mode: MASK
+      mask-value: "********"
+      # Default threshold is PII only; add SENSITIVE and/or INTERNAL to widen
+      protected-types:
+        - PII
+      block-entity-responses: true
+
 camunda.bpm:
   database:
     schema-update: true

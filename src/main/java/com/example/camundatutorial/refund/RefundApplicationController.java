@@ -21,18 +21,21 @@ public class RefundApplicationController {
 
     private final RuntimeService runtimeService;
     private final RefundApplicationService refundApplicationService;
+    private final RefundApplicationMapper refundApplicationMapper;
 
     public RefundApplicationController(
             RuntimeService runtimeService,
-            RefundApplicationService refundApplicationService
+            RefundApplicationService refundApplicationService,
+            RefundApplicationMapper refundApplicationMapper
     ) {
         this.runtimeService = runtimeService;
         this.refundApplicationService = refundApplicationService;
+        this.refundApplicationMapper = refundApplicationMapper;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Object> start(@RequestBody RefundApplicationRequest request) {
+    public RefundApplicationStartResponse start(@RequestBody RefundApplicationRequest request) {
         if (request.getFirstName() == null || request.getFirstName().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "firstName is required");
         }
@@ -53,22 +56,22 @@ public class RefundApplicationController {
                 variables
         );
 
-        return Map.of(
-                "processInstanceId", instance.getId(),
-                "processDefinitionKey", "refund-application",
-                "firstName", firstName,
-                "lastName", lastName,
-                "message", "Process started. Query /api/refund-applications or open /h2-console to inspect DB state."
-        );
+        RefundApplicationStartResponse response = new RefundApplicationStartResponse();
+        response.setProcessInstanceId(instance.getId());
+        response.setProcessDefinitionKey("refund-application");
+        response.setFirstName(firstName);
+        response.setLastName(lastName);
+        response.setMessage("Process started. Query /api/refund-applications or open /h2-console to inspect DB state.");
+        return response;
     }
 
     @GetMapping
-    public List<RefundApplicationEntity> list() {
-        return refundApplicationService.findAll();
+    public List<RefundApplicationResponse> list() {
+        return refundApplicationMapper.toResponseList(refundApplicationService.findAll());
     }
 
     @GetMapping("/{applicationId}")
-    public RefundApplicationEntity get(@PathVariable String applicationId) {
-        return refundApplicationService.getByApplicationId(applicationId);
+    public RefundApplicationResponse get(@PathVariable String applicationId) {
+        return refundApplicationMapper.toResponse(refundApplicationService.getByApplicationId(applicationId));
     }
 }
