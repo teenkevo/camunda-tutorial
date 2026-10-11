@@ -31,3 +31,6 @@ bin/
 
 ### Maven ###
 target/
+
+# governance-service H2 files
+data/

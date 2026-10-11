@@ -7,6 +7,8 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="governance-annotations" />
+        <module name="camunda-client" />
       </profile>
       <profile name="Annotation profile for camunda-tutorial" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -14,9 +16,28 @@
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.48/lombok-1.18.48.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.48/lombok-1.18.48.jar" />
         </processorPath>
-        <module name="camunda-tutorial" />
+        <module name="governance-service" />
+        <module name="taxpayer-service" />
+        <module name="camunda-service" />
+        <module name="governance-runtime" />
+        <module name="refund-service" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="camunda-app" target="17" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="camunda-client" options="-parameters" />
+      <module name="camunda-service" options="-parameters" />
+      <module name="governance-annotations" options="-parameters" />
+      <module name="governance-runtime" options="-parameters" />
+      <module name="governance-service" options="-parameters" />
+      <module name="refund-service" options="-parameters" />
+      <module name="taxpayer-service" options="-parameters" />
+    </option>
   </component>
 </project>

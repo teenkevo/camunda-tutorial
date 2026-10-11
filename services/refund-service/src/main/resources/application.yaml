@@ -1,0 +1,39 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: refund-service
+  datasource:
+    url: jdbc:h2:mem:refund-service;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+app:
+  sensitivity:
+    protection:
+      enabled: true
+      response-mode: MASK
+      mask-value: "********"
+      protected-types:
+        - PII
+      block-entity-responses: true
+  governance:
+    catalog:
+      publish-on-startup: true
+      service-name: refund-service
+      base-url: http://localhost:8081
+      scan-packages: com.example.refund
+      fail-on-error: false
+      fail-on-non-compliant: false
+  camunda:
+    base-url: http://localhost:8080
