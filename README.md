@@ -81,4 +81,7 @@ Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am
 | Refunds API | http://localhost:8082/api/refund-applications |
 | Taxpayer API | http://localhost:8083/api/taxpayer-registrations |
 
-Table metadata (owner, domain, description, sensitivity, …) lives in the **governance catalog** (`/api/governance/tables`). Domain services also always apply matching Oracle `COMMENT ON` remarks on startup. Extend `GovernanceTableMetadataDto` / catalog columns as you add attributes.
+- **Governance catalog** (`/api/governance/tables`): owner, domain, sensitivity, description, …
+- **Oracle `COMMENT ON`**: only `@Comment` text on entities/fields (applied on every domain-service startup)
+
+Extend `GovernanceTableMetadataDto` / catalog columns as you add governance attributes.

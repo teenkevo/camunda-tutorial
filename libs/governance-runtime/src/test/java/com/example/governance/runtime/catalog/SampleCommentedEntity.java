@@ -17,4 +17,7 @@ class SampleCommentedEntity {
 
     @Sensitive(SensitiveType.PII)
     private String fullName;
+
+    @Comment("Business key")
+    private String code;
 }

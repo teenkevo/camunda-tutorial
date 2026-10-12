@@ -1,8 +1,5 @@
 package com.example.governance.runtime.catalog;
 
-import com.example.governance.annotations.DataDomain;
-import com.example.governance.annotations.DataOwner;
-import com.example.governance.annotations.Sensitive;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -17,19 +14,19 @@ import javax.sql.DataSource;
 import org.hibernate.annotations.Comment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.stereotype.Component;
 
 /**
- * Always writes DB remarks via {@code COMMENT ON TABLE/COLUMN} on startup.
- * Hibernate's schema update does not reliably apply {@link Comment} on Oracle after tables exist.
+ * Always applies Oracle {@code COMMENT ON} from Hibernate {@link Comment} only.
+ * Sensitivity / owner / domain belong in the governance catalog, not DB remarks.
  */
 @Component
 @Order(200)
@@ -56,7 +53,7 @@ public class GovernanceDbCommentApplier implements ApplicationRunner {
         Set<String> packages = scanPackages();
         List<String> statements = buildCommentStatements(packages);
         if (statements.isEmpty()) {
-            log.warn("No DB comments to apply (scan packages: {})", packages);
+            log.warn("No @Comment annotations found to apply (scan packages: {})", packages);
             return;
         }
         int applied = 0;
@@ -71,10 +68,10 @@ public class GovernanceDbCommentApplier implements ApplicationRunner {
                 }
             }
         } catch (Exception ex) {
-            log.warn("Governance DB comment pass failed: {}", ex.getMessage());
+            log.warn("DB @Comment pass failed: {}", ex.getMessage());
             return;
         }
-        log.info("Applied {}/{} governance DB comment statement(s) for packages {}", applied, statements.size(), packages);
+        log.info("Applied {}/{} @Comment statement(s) for packages {}", applied, statements.size(), packages);
     }
 
     List<String> buildCommentStatements(Set<String> packages) {
@@ -102,62 +99,27 @@ public class GovernanceDbCommentApplier implements ApplicationRunner {
         List<String> sql = new ArrayList<>();
         String tableName = resolveTableName(type);
 
-        String tableComment = tableComment(type);
-        if (tableComment != null && !tableComment.isBlank()) {
-            sql.add("COMMENT ON TABLE " + tableName + " IS '" + escape(tableComment) + "'");
+        Comment tableComment = type.getAnnotation(Comment.class);
+        if (tableComment != null && !tableComment.value().isBlank()) {
+            sql.add("COMMENT ON TABLE " + tableName + " IS '" + escape(tableComment.value().trim()) + "'");
         }
 
         Class<?> current = type;
         while (current != null && current != Object.class) {
             for (Field field : current.getDeclaredFields()) {
-                String columnComment = columnComment(field);
-                if (columnComment == null || columnComment.isBlank()) {
-                    continue;
-                }
+                Comment fieldComment = field.getAnnotation(Comment.class);
                 String columnName = resolveColumnName(field);
-                sql.add("COMMENT ON COLUMN " + tableName + "." + columnName + " IS '" + escape(columnComment) + "'");
+                if (fieldComment != null && !fieldComment.value().isBlank()) {
+                    sql.add("COMMENT ON COLUMN " + tableName + "." + columnName
+                            + " IS '" + escape(fieldComment.value().trim()) + "'");
+                } else {
+                    // Clear stale remarks (e.g. old [PII] tags) when there is no @Comment
+                    sql.add("COMMENT ON COLUMN " + tableName + "." + columnName + " IS ''");
+                }
             }
             current = current.getSuperclass();
         }
         return sql;
-    }
-
-    private static String tableComment(Class<?> type) {
-        List<String> parts = new ArrayList<>();
-        Comment comment = type.getAnnotation(Comment.class);
-        if (comment != null && !comment.value().isBlank()) {
-            parts.add(comment.value().trim());
-        }
-        DataOwner owner = type.getAnnotation(DataOwner.class);
-        if (owner != null && !owner.value().isBlank()) {
-            parts.add("owner=" + owner.value().trim());
-        }
-        DataDomain domain = type.getAnnotation(DataDomain.class);
-        if (domain != null && !domain.value().isBlank()) {
-            parts.add("domain=" + domain.value().trim());
-        }
-        return parts.isEmpty() ? null : String.join(" | ", parts);
-    }
-
-    private static String columnComment(Field field) {
-        List<String> parts = new ArrayList<>();
-        Comment comment = field.getAnnotation(Comment.class);
-        if (comment != null && !comment.value().isBlank()) {
-            parts.add(comment.value().trim());
-        }
-        Sensitive sensitive = field.getAnnotation(Sensitive.class);
-        if (sensitive != null) {
-            parts.add(sensitive.value().commentTag());
-        }
-        DataOwner owner = field.getAnnotation(DataOwner.class);
-        if (owner != null && !owner.value().isBlank()) {
-            parts.add("owner=" + owner.value().trim());
-        }
-        DataDomain domain = field.getAnnotation(DataDomain.class);
-        if (domain != null && !domain.value().isBlank()) {
-            parts.add("domain=" + domain.value().trim());
-        }
-        return parts.isEmpty() ? null : String.join(" | ", parts);
     }
 
     private static String resolveTableName(Class<?> type) {

@@ -13,29 +13,40 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.Data;
+import org.hibernate.annotations.Comment;
 
 @Data
 @Entity
 @Table(name = "taxpayer_registration")
 @DataOwner("tax-ops")
 @DataDomain("taxpayer-registration")
+@Comment("Taxpayer registration business record")
 public class TaxpayerRegistrationEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Comment("Surrogate primary key")
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @Comment("Camunda process instance id for this registration")
     private String processInstanceId;
 
     @Sensitive(SensitiveType.PII)
+    @Comment("Registered taxpayer display name")
     private String taxpayerName;
 
     @Sensitive(SensitiveType.PII)
+    @Comment("National identity number of the taxpayer")
     private String nationalId;
 
+    @Comment("Tax identification number issued on completion")
     private String tin;
+
+    @Comment("Lifecycle status of the registration")
     private String status;
+
+    @Comment("When the registration record was created")
     private Instant createdAt;
 
     @Override

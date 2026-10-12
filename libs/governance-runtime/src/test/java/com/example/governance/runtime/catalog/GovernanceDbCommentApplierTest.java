@@ -17,17 +17,17 @@ class GovernanceDbCommentApplierTest {
     }
 
     @Test
-    void buildCommentStatements_fromAnnotations() {
+    void buildCommentStatements_onlyFromCommentAnnotation() {
         MockEnvironment env = new MockEnvironment();
         GovernanceCatalogProperties catalog = new GovernanceCatalogProperties();
         GovernanceDbCommentApplier applier = new GovernanceDbCommentApplier(null, env, catalog);
 
         List<String> sql = applier.buildCommentStatements(Set.of(SampleCommentedEntity.class.getPackageName()));
 
-        assertThat(sql).anyMatch(s -> s.contains("COMMENT ON TABLE sample_thing IS '")
-                && s.contains("Sample table")
-                && s.contains("owner=tax-ops")
-                && s.contains("domain=refunds"));
-        assertThat(sql).contains("COMMENT ON COLUMN sample_thing.full_name IS '[PII]'");
+        assertThat(sql).contains("COMMENT ON TABLE sample_thing IS 'Sample table'");
+        assertThat(sql).contains("COMMENT ON COLUMN sample_thing.code IS 'Business key'");
+        // @Sensitive alone must not become an Oracle remark; clear instead
+        assertThat(sql).contains("COMMENT ON COLUMN sample_thing.full_name IS ''");
+        assertThat(sql).noneMatch(s -> s.contains("[PII]") || s.contains("owner=") || s.contains("domain="));
     }
 }
