@@ -32,5 +32,8 @@ bin/
 ### Maven ###
 target/
 
-# governance-service H2 files
+# local data directories
 data/
+
+# local start-all logs/pids
+.logs/

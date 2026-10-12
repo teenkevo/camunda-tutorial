@@ -10,6 +10,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import org.hibernate.annotations.Comment;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
@@ -47,6 +48,7 @@ public class GovernanceMetadataScanner {
 
         DataOwner typeOwner = type.getAnnotation(DataOwner.class);
         DataDomain typeDomain = type.getAnnotation(DataDomain.class);
+        Comment typeComment = type.getAnnotation(Comment.class);
 
         GovernanceAssetDto entityAsset = new GovernanceAssetDto();
         entityAsset.setServiceName(serviceName);
@@ -60,6 +62,9 @@ public class GovernanceMetadataScanner {
         if (typeDomain != null) {
             entityAsset.setDomain(typeDomain.value());
         }
+        if (typeComment != null && !typeComment.value().isBlank()) {
+            entityAsset.setDescription(typeComment.value().trim());
+        }
         assets.add(entityAsset);
 
         Class<?> current = type;
@@ -68,11 +73,14 @@ public class GovernanceMetadataScanner {
                 Sensitive sensitive = field.getAnnotation(Sensitive.class);
                 DataOwner fieldOwner = field.getAnnotation(DataOwner.class);
                 DataDomain fieldDomain = field.getAnnotation(DataDomain.class);
-                if (sensitive == null && fieldOwner == null && fieldDomain == null) {
+                Comment fieldComment = field.getAnnotation(Comment.class);
+                if (sensitive == null && fieldOwner == null && fieldDomain == null && fieldComment == null) {
                     continue;
                 }
                 Column column = field.getAnnotation(Column.class);
-                String columnName = column != null && !column.name().isBlank() ? column.name() : field.getName();
+                String columnName = column != null && !column.name().isBlank()
+                        ? column.name()
+                        : toSnakeCase(field.getName());
 
                 GovernanceAssetDto fieldAsset = new GovernanceAssetDto();
                 fieldAsset.setServiceName(serviceName);
@@ -90,10 +98,29 @@ public class GovernanceMetadataScanner {
                 if (fieldDomain != null) {
                     fieldAsset.setDomain(fieldDomain.value());
                 }
+                if (fieldComment != null && !fieldComment.value().isBlank()) {
+                    fieldAsset.setDescription(fieldComment.value().trim());
+                }
                 assets.add(fieldAsset);
             }
             current = current.getSuperclass();
         }
         return assets;
+    }
+
+    private static String toSnakeCase(String name) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (Character.isUpperCase(c)) {
+                if (i > 0) {
+                    sb.append('_');
+                }
+                sb.append(Character.toLowerCase(c));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 }

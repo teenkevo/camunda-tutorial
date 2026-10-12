@@ -14,6 +14,7 @@ public class GovernanceAssetDto {
     private String classification;
     private String owner;
     private String domain;
+    private String description;
 
     public void setFieldName(String fieldName) {
         this.fieldName = fieldName == null ? "" : fieldName;

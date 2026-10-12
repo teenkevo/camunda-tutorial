@@ -39,9 +39,12 @@ public class GovernanceAssetEntity {
     @Column(name = "entity_name", nullable = false, length = 255)
     private String entityName;
 
-    /** Empty string for entity-level rows (unique constraint friendly). */
+    /**
+     * Field name for FIELD assets. Entity-level rows use {@code __ENTITY__}
+     * (Oracle treats empty string as NULL, so "" cannot be stored in a NOT NULL column).
+     */
     @Column(name = "field_name", nullable = false, length = 255)
-    private String fieldName = "";
+    private String fieldName = "__ENTITY__";
 
     @Column(name = "table_name", length = 255)
     private String tableName;
@@ -59,10 +62,10 @@ public class GovernanceAssetEntity {
     @Column(length = 120)
     private String domain;
 
+    /** Free-text description / remark (e.g. from {@code @Comment}). */
+    @Column(length = 1000)
+    private String description;
+
     @Column(name = "last_seen_at", nullable = false)
     private Instant lastSeenAt = Instant.now();
-
-    public void setFieldName(String fieldName) {
-        this.fieldName = fieldName == null ? "" : fieldName;
-    }
 }

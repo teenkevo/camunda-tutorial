@@ -5,14 +5,20 @@ spring:
   application:
     name: camunda-service
   datasource:
-    url: jdbc:h2:mem:camunda-service;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    # Override CAMUNDA_JDBC_URL for a dedicated DB/PDB; otherwise share host with own schema user.
+    url: ${CAMUNDA_JDBC_URL:${ORACLE_JDBC_URL:jdbc:oracle:thin:@//localhost:1521/FREEPDB1}}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${CAMUNDA_DB_USER:CAMUNDA_SERVICE}
+    password: ${CAMUNDA_DB_PASSWORD:Camunda_Pass_1}
   jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
     hibernate:
       ddl-auto: update
     open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
 
 app:
   services:
@@ -21,6 +27,7 @@ app:
 
 camunda.bpm:
   database:
+    type: oracle
     schema-update: true
   admin-user:
     id: demo

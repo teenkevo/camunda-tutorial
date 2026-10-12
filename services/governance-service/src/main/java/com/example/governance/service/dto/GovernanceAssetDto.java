@@ -14,4 +14,5 @@ public class GovernanceAssetDto {
     private String classification;
     private String owner;
     private String domain;
+    private String description;
 }

@@ -3,6 +3,7 @@ package com.example.governance.service.controller;
 import com.example.governance.service.dto.ConformanceReport;
 import com.example.governance.service.dto.GovernanceAssetDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
+import com.example.governance.service.dto.GovernanceTableMetadataDto;
 import com.example.governance.service.entity.GovernanceAssetEntity;
 import com.example.governance.service.service.GovernanceCatalogService;
 import java.util.List;
@@ -41,6 +42,15 @@ public class GovernanceCatalogController {
         return catalogService.list(service).stream().map(this::toDto).toList();
     }
 
+    /**
+     * Table-centric metadata: owner, domain, description, sensitivity per column.
+     * Prefer this when browsing or extending governance attributes.
+     */
+    @GetMapping("/tables")
+    public List<GovernanceTableMetadataDto> tables(@RequestParam(value = "service", required = false) String service) {
+        return catalogService.listTables(service);
+    }
+
     @GetMapping("/conformance")
     public ConformanceReport conformance(@RequestParam("service") String service) {
         try {
@@ -55,12 +65,13 @@ public class GovernanceCatalogController {
         dto.setServiceName(entity.getServiceName());
         dto.setAssetType(entity.getAssetType());
         dto.setEntityName(entity.getEntityName());
-        dto.setFieldName(entity.getFieldName());
+        dto.setFieldName(GovernanceCatalogService.toApiFieldName(entity.getFieldName()));
         dto.setTableName(entity.getTableName());
         dto.setColumnName(entity.getColumnName());
         dto.setClassification(entity.getClassification());
         dto.setOwner(entity.getOwner());
         dto.setDomain(entity.getDomain());
+        dto.setDescription(entity.getDescription());
         return dto;
     }
 }

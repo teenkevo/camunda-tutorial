@@ -3,12 +3,15 @@ package com.example.governance.service.service;
 import com.example.governance.service.dto.ConformanceIssue;
 import com.example.governance.service.dto.ConformanceReport;
 import com.example.governance.service.dto.GovernanceAssetDto;
+import com.example.governance.service.dto.GovernanceColumnMetadataDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
+import com.example.governance.service.dto.GovernanceTableMetadataDto;
 import com.example.governance.service.entity.GovernanceAssetEntity;
 import com.example.governance.service.repository.GovernanceAssetRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,11 @@ public class GovernanceCatalogService {
 
     public static final String ASSET_ENTITY = "ENTITY";
     public static final String ASSET_FIELD = "FIELD";
+
+    /**
+     * Stored in {@code field_name} for entity-level rows. Oracle converts {@code ""} to NULL.
+     */
+    public static final String ENTITY_FIELD_MARKER = "__ENTITY__";
 
     private final GovernanceAssetRepository repository;
 
@@ -38,7 +46,7 @@ public class GovernanceCatalogService {
             return saved;
         }
         for (GovernanceAssetDto dto : request.assets()) {
-            String fieldName = dto.getFieldName() == null ? "" : dto.getFieldName();
+            String fieldName = normalizeFieldName(dto.getFieldName(), dto.getAssetType());
             GovernanceAssetEntity entity = repository
                     .findByServiceNameAndEntityNameAndFieldName(serviceName, dto.getEntityName(), fieldName)
                     .orElseGet(GovernanceAssetEntity::new);
@@ -51,6 +59,7 @@ public class GovernanceCatalogService {
             entity.setClassification(blankToNull(dto.getClassification()));
             entity.setOwner(blankToNull(dto.getOwner()));
             entity.setDomain(blankToNull(dto.getDomain()));
+            entity.setDescription(blankToNull(dto.getDescription()));
             entity.setLastSeenAt(now);
             saved.add(repository.save(entity));
         }
@@ -63,6 +72,58 @@ public class GovernanceCatalogService {
             return repository.findAllByOrderByServiceNameAscEntityNameAscFieldNameAsc();
         }
         return repository.findByServiceNameOrderByEntityNameAscFieldNameAsc(serviceName.trim());
+    }
+
+    /**
+     * Groups flat catalog rows into table → columns for browsing metadata.
+     */
+    @Transactional(readOnly = true)
+    public List<GovernanceTableMetadataDto> listTables(String serviceName) {
+        List<GovernanceAssetEntity> assets = list(serviceName);
+        Map<String, GovernanceTableMetadataDto> tables = new LinkedHashMap<>();
+
+        for (GovernanceAssetEntity asset : assets) {
+            if (isEntityLevel(asset)) {
+                String key = tableKey(asset);
+                GovernanceTableMetadataDto table = tables.computeIfAbsent(key, k -> newTable(asset));
+                table.setServiceName(asset.getServiceName());
+                table.setTableName(asset.getTableName());
+                table.setEntityName(asset.getEntityName());
+                table.setOwner(asset.getOwner());
+                table.setDomain(asset.getDomain());
+                table.setDescription(asset.getDescription());
+            }
+        }
+
+        for (GovernanceAssetEntity asset : assets) {
+            if (isEntityLevel(asset)) {
+                continue;
+            }
+            String key = tableKey(asset);
+            GovernanceTableMetadataDto table = tables.computeIfAbsent(key, k -> newTable(asset));
+            GovernanceColumnMetadataDto column = new GovernanceColumnMetadataDto();
+            column.setFieldName(toApiFieldName(asset.getFieldName()));
+            column.setColumnName(asset.getColumnName());
+            column.setClassification(asset.getClassification());
+            column.setOwner(asset.getOwner());
+            column.setDomain(asset.getDomain());
+            column.setDescription(asset.getDescription());
+            table.getColumns().add(column);
+        }
+
+        return new ArrayList<>(tables.values());
+    }
+
+    private static GovernanceTableMetadataDto newTable(GovernanceAssetEntity asset) {
+        GovernanceTableMetadataDto table = new GovernanceTableMetadataDto();
+        table.setServiceName(asset.getServiceName());
+        table.setTableName(asset.getTableName());
+        table.setEntityName(asset.getEntityName());
+        return table;
+    }
+
+    private static String tableKey(GovernanceAssetEntity asset) {
+        return asset.getServiceName() + "|" + asset.getEntityName();
     }
 
     /**
@@ -79,14 +140,14 @@ public class GovernanceCatalogService {
                 repository.findByServiceNameOrderByEntityNameAscFieldNameAsc(serviceName.trim());
         Map<String, GovernanceAssetEntity> entitiesByName = new HashMap<>();
         for (GovernanceAssetEntity asset : assets) {
-            if (ASSET_ENTITY.equals(asset.getAssetType()) || asset.getFieldName().isEmpty()) {
+            if (isEntityLevel(asset)) {
                 entitiesByName.put(asset.getEntityName(), asset);
             }
         }
 
         List<ConformanceIssue> issues = new ArrayList<>();
         for (GovernanceAssetEntity asset : assets) {
-            if (ASSET_ENTITY.equals(asset.getAssetType()) || asset.getFieldName().isEmpty()) {
+            if (isEntityLevel(asset)) {
                 if (isBlank(asset.getOwner())) {
                     issues.add(new ConformanceIssue(
                             asset.getEntityName(),
@@ -131,8 +192,28 @@ public class GovernanceCatalogService {
         return new ConformanceReport(serviceName.trim(), issues.isEmpty(), issues);
     }
 
+    /** API-facing field name: marker/blank → empty string. */
+    public static String toApiFieldName(String storedFieldName) {
+        return isEntityFieldName(storedFieldName) ? "" : storedFieldName;
+    }
+
+    static String normalizeFieldName(String fieldName, String assetType) {
+        if (ASSET_ENTITY.equals(assetType) || isEntityFieldName(fieldName)) {
+            return ENTITY_FIELD_MARKER;
+        }
+        return fieldName.trim();
+    }
+
+    private static boolean isEntityLevel(GovernanceAssetEntity asset) {
+        return ASSET_ENTITY.equals(asset.getAssetType()) || isEntityFieldName(asset.getFieldName());
+    }
+
+    private static boolean isEntityFieldName(String fieldName) {
+        return isBlank(fieldName) || ENTITY_FIELD_MARKER.equals(fieldName);
+    }
+
     private static String inferType(String fieldName) {
-        return fieldName == null || fieldName.isEmpty() ? ASSET_ENTITY : ASSET_FIELD;
+        return isEntityFieldName(fieldName) ? ASSET_ENTITY : ASSET_FIELD;
     }
 
     private static String blankToNull(String value) {
