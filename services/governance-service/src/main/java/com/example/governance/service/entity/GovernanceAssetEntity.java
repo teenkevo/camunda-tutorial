@@ -52,7 +52,7 @@ public class GovernanceAssetEntity {
     @Column(name = "column_name", length = 255)
     private String columnName;
 
-    /** PII / SENSITIVE / INTERNAL */
+    /** PII / SENSITIVE / INTERNAL (entity default and/or field). */
     @Column(length = 64)
     private String classification;
 
@@ -60,7 +60,13 @@ public class GovernanceAssetEntity {
     private String owner;
 
     @Column(length = 120)
+    private String steward;
+
+    @Column(length = 120)
     private String domain;
+
+    @Column(name = "retention_policy", length = 120)
+    private String retentionPolicy;
 
     /** Free-text description / remark (e.g. from {@code @Comment}). */
     @Column(length = 1000)

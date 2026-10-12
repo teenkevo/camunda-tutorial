@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Declares the stewardship owner of an entity or field for governance catalogs.
+ * Declares the owner of a field (or legacy entity). Prefer {@link DataGovernance} on entity types.
  */
 @Documented
 @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD})

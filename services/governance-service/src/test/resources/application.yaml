@@ -8,3 +8,17 @@ spring:
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
+
+app:
+  governance:
+    naming:
+      enforce: true
+      domains:
+        - id: refunds
+          table-prefix: RFND_
+          services:
+            - refund-service
+        - id: taxpayer-registration
+          table-prefix: REG_
+          services:
+            - taxpayer-service

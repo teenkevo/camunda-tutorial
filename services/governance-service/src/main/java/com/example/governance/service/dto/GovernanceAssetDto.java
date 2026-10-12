@@ -13,6 +13,8 @@ public class GovernanceAssetDto {
     private String columnName;
     private String classification;
     private String owner;
+    private String steward;
     private String domain;
+    private String retentionPolicy;
     private String description;
 }

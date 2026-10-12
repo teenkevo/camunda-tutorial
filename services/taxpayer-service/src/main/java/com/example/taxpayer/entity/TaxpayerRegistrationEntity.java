@@ -1,7 +1,6 @@
 package com.example.taxpayer.entity;
 
-import com.example.governance.annotations.DataDomain;
-import com.example.governance.annotations.DataOwner;
+import com.example.governance.annotations.DataGovernance;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
@@ -17,9 +16,14 @@ import org.hibernate.annotations.Comment;
 
 @Data
 @Entity
-@Table(name = "taxpayer_registration")
-@DataOwner("tax-ops")
-@DataDomain("taxpayer-registration")
+@Table(name = "REG_TAX_PAYER_MST")
+@DataGovernance(
+        owner = "tax-ops",
+        steward = "Registration Data Management",
+        domain = "taxpayer-registration",
+        classification = SensitiveType.PII,
+        retentionPolicy = "TAXPAYER_RETENTION"
+)
 @Comment("Taxpayer registration business record")
 public class TaxpayerRegistrationEntity {
 

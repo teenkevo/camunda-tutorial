@@ -1,7 +1,10 @@
 package com.example.governance.service.controller;
 
+import com.example.governance.service.config.GovernanceDomainNamingRule;
+import com.example.governance.service.config.GovernanceNamingProperties;
 import com.example.governance.service.dto.ConformanceReport;
 import com.example.governance.service.dto.GovernanceAssetDto;
+import com.example.governance.service.dto.GovernanceDomainNamingDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
 import com.example.governance.service.dto.GovernanceTableMetadataDto;
 import com.example.governance.service.entity.GovernanceAssetEntity;
@@ -22,9 +25,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class GovernanceCatalogController {
 
     private final GovernanceCatalogService catalogService;
+    private final GovernanceNamingProperties namingProperties;
 
-    public GovernanceCatalogController(GovernanceCatalogService catalogService) {
+    public GovernanceCatalogController(
+            GovernanceCatalogService catalogService,
+            GovernanceNamingProperties namingProperties
+    ) {
         this.catalogService = catalogService;
+        this.namingProperties = namingProperties;
     }
 
     @PostMapping("/sync")
@@ -60,6 +68,22 @@ public class GovernanceCatalogController {
         }
     }
 
+    /** Configured allow-list of domains and table-naming conventions. */
+    @GetMapping("/naming-domains")
+    public List<GovernanceDomainNamingDto> namingDomains() {
+        return namingProperties.getDomains().stream().map(this::toNamingDto).toList();
+    }
+
+    private GovernanceDomainNamingDto toNamingDto(GovernanceDomainNamingRule rule) {
+        GovernanceDomainNamingDto dto = new GovernanceDomainNamingDto();
+        dto.setId(rule.getId());
+        dto.setLabel(rule.getLabel());
+        dto.setTablePrefix(rule.getTablePrefix());
+        dto.setTablePattern(GovernanceCatalogService.resolveTablePattern(rule));
+        dto.setServices(rule.getServices());
+        return dto;
+    }
+
     private GovernanceAssetDto toDto(GovernanceAssetEntity entity) {
         GovernanceAssetDto dto = new GovernanceAssetDto();
         dto.setServiceName(entity.getServiceName());
@@ -70,7 +94,9 @@ public class GovernanceCatalogController {
         dto.setColumnName(entity.getColumnName());
         dto.setClassification(entity.getClassification());
         dto.setOwner(entity.getOwner());
+        dto.setSteward(entity.getSteward());
         dto.setDomain(entity.getDomain());
+        dto.setRetentionPolicy(entity.getRetentionPolicy());
         dto.setDescription(entity.getDescription());
         return dto;
     }

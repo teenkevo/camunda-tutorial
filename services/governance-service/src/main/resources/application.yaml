@@ -22,3 +22,28 @@ spring:
 logging:
   level:
     com.example.governance: INFO
+
+# Allow-listed data domains and physical table naming. Entities outside this fail conformance.
+app:
+  governance:
+    naming:
+      enforce: true
+      domains:
+        - id: refunds
+          label: Refunds
+          table-prefix: RFND_
+          services:
+            - refund-service
+        - id: taxpayer-registration
+          label: Taxpayer registration
+          table-prefix: REG_
+          # Aligns with Registration DB Mapping sheet (REG_TAX_PAYER_MST, REG_*_DTLS, …)
+          table-pattern: "^REG_[A-Z0-9_]+$"
+          services:
+            - taxpayer-service
+        - id: governance
+          label: Governance catalog
+          table-prefix: GOV_
+          services:
+            - governance-service
+

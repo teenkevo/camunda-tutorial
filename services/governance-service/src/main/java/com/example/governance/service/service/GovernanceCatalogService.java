@@ -1,5 +1,7 @@
 package com.example.governance.service.service;
 
+import com.example.governance.service.config.GovernanceDomainNamingRule;
+import com.example.governance.service.config.GovernanceNamingProperties;
 import com.example.governance.service.dto.ConformanceIssue;
 import com.example.governance.service.dto.ConformanceReport;
 import com.example.governance.service.dto.GovernanceAssetDto;
@@ -13,7 +15,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,9 +35,14 @@ public class GovernanceCatalogService {
     public static final String ENTITY_FIELD_MARKER = "__ENTITY__";
 
     private final GovernanceAssetRepository repository;
+    private final GovernanceNamingProperties namingProperties;
 
-    public GovernanceCatalogService(GovernanceAssetRepository repository) {
+    public GovernanceCatalogService(
+            GovernanceAssetRepository repository,
+            GovernanceNamingProperties namingProperties
+    ) {
         this.repository = repository;
+        this.namingProperties = namingProperties;
     }
 
     @Transactional
@@ -58,7 +69,9 @@ public class GovernanceCatalogService {
             entity.setColumnName(dto.getColumnName());
             entity.setClassification(blankToNull(dto.getClassification()));
             entity.setOwner(blankToNull(dto.getOwner()));
+            entity.setSteward(blankToNull(dto.getSteward()));
             entity.setDomain(blankToNull(dto.getDomain()));
+            entity.setRetentionPolicy(blankToNull(dto.getRetentionPolicy()));
             entity.setDescription(blankToNull(dto.getDescription()));
             entity.setLastSeenAt(now);
             saved.add(repository.save(entity));
@@ -90,7 +103,10 @@ public class GovernanceCatalogService {
                 table.setTableName(asset.getTableName());
                 table.setEntityName(asset.getEntityName());
                 table.setOwner(asset.getOwner());
+                table.setSteward(asset.getSteward());
                 table.setDomain(asset.getDomain());
+                table.setClassification(asset.getClassification());
+                table.setRetentionPolicy(asset.getRetentionPolicy());
                 table.setDescription(asset.getDescription());
             }
         }
@@ -127,17 +143,20 @@ public class GovernanceCatalogService {
     }
 
     /**
-     * Enforces catalog completeness:
-     * - every ENTITY must have owner + domain
-     * - every FIELD with classification must resolve an owner + domain (field or parent entity)
+     * Enforces catalog completeness and naming policy:
+     * - every ENTITY must declare {@code @DataGovernance} fields (owner, steward, domain,
+     *   classification, retentionPolicy)
+     * - domain must be in the configured allow-list and table name must match convention
+     * - classified FIELDs must resolve owner + domain (field or parent entity)
      */
     @Transactional(readOnly = true)
     public ConformanceReport conformance(String serviceName) {
         if (serviceName == null || serviceName.isBlank()) {
             throw new IllegalArgumentException("serviceName is required");
         }
+        String service = serviceName.trim();
         List<GovernanceAssetEntity> assets =
-                repository.findByServiceNameOrderByEntityNameAscFieldNameAsc(serviceName.trim());
+                repository.findByServiceNameOrderByEntityNameAscFieldNameAsc(service);
         Map<String, GovernanceAssetEntity> entitiesByName = new HashMap<>();
         for (GovernanceAssetEntity asset : assets) {
             if (isEntityLevel(asset)) {
@@ -148,21 +167,9 @@ public class GovernanceCatalogService {
         List<ConformanceIssue> issues = new ArrayList<>();
         for (GovernanceAssetEntity asset : assets) {
             if (isEntityLevel(asset)) {
-                if (isBlank(asset.getOwner())) {
-                    issues.add(new ConformanceIssue(
-                            asset.getEntityName(),
-                            "",
-                            "OWNER_REQUIRED",
-                            "Entity is missing @DataOwner / owner in catalog"
-                    ));
-                }
-                if (isBlank(asset.getDomain())) {
-                    issues.add(new ConformanceIssue(
-                            asset.getEntityName(),
-                            "",
-                            "DOMAIN_REQUIRED",
-                            "Entity is missing @DataDomain / domain in catalog"
-                    ));
+                issues.addAll(entityGovernanceIssues(asset));
+                if (!isBlank(asset.getDomain()) && namingProperties.isEnforce()) {
+                    issues.addAll(namingIssues(service, asset));
                 }
                 continue;
             }
@@ -189,7 +196,117 @@ public class GovernanceCatalogService {
                 }
             }
         }
-        return new ConformanceReport(serviceName.trim(), issues.isEmpty(), issues);
+        return new ConformanceReport(service, issues.isEmpty(), issues);
+    }
+
+    private static List<ConformanceIssue> entityGovernanceIssues(GovernanceAssetEntity asset) {
+        List<ConformanceIssue> issues = new ArrayList<>();
+        if (isBlank(asset.getOwner())) {
+            issues.add(new ConformanceIssue(
+                    asset.getEntityName(),
+                    "",
+                    "OWNER_REQUIRED",
+                    "Entity is missing @DataGovernance.owner (or legacy @DataOwner)"
+            ));
+        }
+        if (isBlank(asset.getSteward())) {
+            issues.add(new ConformanceIssue(
+                    asset.getEntityName(),
+                    "",
+                    "STEWARD_REQUIRED",
+                    "Entity is missing @DataGovernance.steward"
+            ));
+        }
+        if (isBlank(asset.getDomain())) {
+            issues.add(new ConformanceIssue(
+                    asset.getEntityName(),
+                    "",
+                    "DOMAIN_REQUIRED",
+                    "Entity is missing @DataGovernance.domain (or legacy @DataDomain)"
+            ));
+        }
+        if (isBlank(asset.getClassification())) {
+            issues.add(new ConformanceIssue(
+                    asset.getEntityName(),
+                    "",
+                    "CLASSIFICATION_REQUIRED",
+                    "Entity is missing @DataGovernance.classification"
+            ));
+        }
+        if (isBlank(asset.getRetentionPolicy())) {
+            issues.add(new ConformanceIssue(
+                    asset.getEntityName(),
+                    "",
+                    "RETENTION_POLICY_REQUIRED",
+                    "Entity is missing @DataGovernance.retentionPolicy"
+            ));
+        }
+        return issues;
+    }
+
+    private List<ConformanceIssue> namingIssues(String serviceName, GovernanceAssetEntity entity) {
+        List<ConformanceIssue> issues = new ArrayList<>();
+        Optional<GovernanceDomainNamingRule> ruleOpt = namingProperties.findDomain(entity.getDomain());
+        if (ruleOpt.isEmpty()) {
+            issues.add(new ConformanceIssue(
+                    entity.getEntityName(),
+                    "",
+                    "DOMAIN_NOT_ALLOWED",
+                    "Domain '" + entity.getDomain() + "' is not in app.governance.naming.domains"
+            ));
+            return issues;
+        }
+
+        GovernanceDomainNamingRule rule = ruleOpt.get();
+        if (rule.getServices() != null && !rule.getServices().isEmpty()
+                && rule.getServices().stream().noneMatch(s -> s.equalsIgnoreCase(serviceName))) {
+            issues.add(new ConformanceIssue(
+                    entity.getEntityName(),
+                    "",
+                    "DOMAIN_SERVICE_MISMATCH",
+                    "Domain '" + entity.getDomain() + "' is not allowed for service '" + serviceName + "'"
+            ));
+        }
+
+        if (isBlank(entity.getTableName())) {
+            issues.add(new ConformanceIssue(
+                    entity.getEntityName(),
+                    "",
+                    "TABLE_NAME_REQUIRED",
+                    "Entity is missing @Table name / tableName in catalog"
+            ));
+            return issues;
+        }
+
+        String physical = entity.getTableName().trim().toUpperCase(Locale.ROOT);
+        String pattern = resolveTablePattern(rule);
+        try {
+            if (!Pattern.compile(pattern).matcher(physical).matches()) {
+                issues.add(new ConformanceIssue(
+                        entity.getEntityName(),
+                        "",
+                        "TABLE_NAME_CONVENTION",
+                        "Table '" + entity.getTableName() + "' does not match domain '"
+                                + rule.getId() + "' pattern " + pattern
+                ));
+            }
+        } catch (PatternSyntaxException ex) {
+            issues.add(new ConformanceIssue(
+                    entity.getEntityName(),
+                    "",
+                    "TABLE_NAME_PATTERN_INVALID",
+                    "Configured table-pattern for domain '" + rule.getId() + "' is invalid: " + pattern
+            ));
+        }
+        return issues;
+    }
+
+    public static String resolveTablePattern(GovernanceDomainNamingRule rule) {
+        if (rule.getTablePattern() != null && !rule.getTablePattern().isBlank()) {
+            return rule.getTablePattern().trim();
+        }
+        String prefix = rule.getTablePrefix() == null ? "" : rule.getTablePrefix().trim().toUpperCase(Locale.ROOT);
+        return "^" + Pattern.quote(prefix) + "[A-Z0-9_]+$";
     }
 
     /** API-facing field name: marker/blank → empty string. */

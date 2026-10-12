@@ -1,6 +1,7 @@
 package com.example.governance.runtime.catalog;
 
 import com.example.governance.annotations.DataDomain;
+import com.example.governance.annotations.DataGovernance;
 import com.example.governance.annotations.DataOwner;
 import com.example.governance.annotations.Sensitive;
 import jakarta.persistence.Column;
@@ -46,6 +47,7 @@ public class GovernanceMetadataScanner {
         Table table = type.getAnnotation(Table.class);
         String tableName = table != null && !table.name().isBlank() ? table.name() : type.getSimpleName();
 
+        DataGovernance governance = type.getAnnotation(DataGovernance.class);
         DataOwner typeOwner = type.getAnnotation(DataOwner.class);
         DataDomain typeDomain = type.getAnnotation(DataDomain.class);
         Comment typeComment = type.getAnnotation(Comment.class);
@@ -56,11 +58,21 @@ public class GovernanceMetadataScanner {
         entityAsset.setEntityName(type.getName());
         entityAsset.setFieldName("");
         entityAsset.setTableName(tableName);
-        if (typeOwner != null) {
-            entityAsset.setOwner(typeOwner.value());
-        }
-        if (typeDomain != null) {
-            entityAsset.setDomain(typeDomain.value());
+
+        if (governance != null) {
+            entityAsset.setOwner(governance.owner());
+            entityAsset.setSteward(governance.steward());
+            entityAsset.setDomain(governance.domain());
+            entityAsset.setClassification(governance.classification().name());
+            entityAsset.setRetentionPolicy(governance.retentionPolicy());
+        } else {
+            // Legacy fallback while migrating to @DataGovernance
+            if (typeOwner != null) {
+                entityAsset.setOwner(typeOwner.value());
+            }
+            if (typeDomain != null) {
+                entityAsset.setDomain(typeDomain.value());
+            }
         }
         if (typeComment != null && !typeComment.value().isBlank()) {
             entityAsset.setDescription(typeComment.value().trim());

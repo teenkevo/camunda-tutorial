@@ -15,7 +15,10 @@ public class GovernanceTableMetadataDto {
     private String tableName;
     private String entityName;
     private String owner;
+    private String steward;
     private String domain;
+    private String classification;
+    private String retentionPolicy;
     private String description;
     private List<GovernanceColumnMetadataDto> columns = new ArrayList<>();
 }

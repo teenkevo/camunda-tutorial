@@ -12,11 +12,25 @@ SERVICES=(
   "taxpayer-service"
 )
 
-echo "==> Stopping services..."
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+  C_RESET=$'\033[0m'
+  C_BOLD=$'\033[1m'
+  C_GREEN=$'\033[32m'
+  C_YELLOW=$'\033[33m'
+  C_CYAN=$'\033[36m'
+else
+  C_RESET='' C_BOLD='' C_GREEN='' C_YELLOW='' C_CYAN=''
+fi
+
+ok()   { printf '%s✔%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+warn() { printf '%s⚠%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
+info() { printf '%s==>%s %s%s%s\n' "$C_CYAN" "$C_RESET" "$C_BOLD" "$*" "$C_RESET"; }
+
+info "Stopping services..."
 for svc in "${SERVICES[@]}"; do
   pid_file="${LOG_DIR}/${svc}.pid"
   if [[ ! -f "$pid_file" ]]; then
-    echo "    ${svc}: no pid file"
+    warn "${svc}: no pid file"
     continue
   fi
   pid="$(cat "$pid_file")"
@@ -24,16 +38,17 @@ for svc in "${SERVICES[@]}"; do
     # Kill Maven parent and its Spring Boot child process group
     kill "$pid" 2>/dev/null || true
     pkill -P "$pid" 2>/dev/null || true
-    echo "    ${svc}: stopped (pid ${pid})"
+    ok "${svc}: stopped (pid ${pid})"
   else
-    echo "    ${svc}: not running"
+    warn "${svc}: not running"
   fi
   rm -f "$pid_file"
 done
 
 if [[ "${1:-}" == "--with-db" ]]; then
-  echo "==> Stopping Oracle..."
+  info "Stopping Oracle..."
   (cd "$ROOT" && docker compose stop oracle)
+  ok "Oracle stopped"
 fi
 
-echo "Done."
+ok "Done."

@@ -81,7 +81,9 @@ Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am
 | Refunds API | http://localhost:8082/api/refund-applications |
 | Taxpayer API | http://localhost:8083/api/taxpayer-registrations |
 
-- **Governance catalog** (`/api/governance/tables`): owner, domain, sensitivity, description, …
-- **Oracle `COMMENT ON`**: only `@Comment` text on entities/fields (applied on every domain-service startup)
+- **Entity governance**: declare `@DataGovernance(owner, steward, domain, classification, retentionPolicy)` on every JPA entity.
+- **Governance catalog** (`/api/governance/tables`): stores that metadata (+ field sensitivity).
+- **Naming policy** (`/api/governance/naming-domains`): allow-listed domains + table prefixes (`REG_`, `RFND_`, …).
+- **Oracle `COMMENT ON`**: only `@Comment` text (applied on domain-service startup).
 
-Extend `GovernanceTableMetadataDto` / catalog columns as you add governance attributes.
+Missing `@DataGovernance` fields, unknown domains, or bad table names fail `GET /api/governance/conformance?service=…`. Configure domains in `app.governance.naming`.
