@@ -37,7 +37,6 @@ app:
         - id: taxpayer-registration
           label: Taxpayer registration
           table-prefix: REG_
-          # Aligns with Registration DB Mapping sheet (REG_TAX_PAYER_MST, REG_*_DTLS, …)
           table-pattern: "^REG_[A-Z0-9_]+$"
           services:
             - taxpayer-service
@@ -46,4 +45,14 @@ app:
           table-prefix: GOV_
           services:
             - governance-service
-
+    openmetadata:
+      enabled: true
+      require-registry-attributes: true
+      base-url: ${OPENMETADATA_API_URL:http://localhost:8585/api}
+      username: ${OPENMETADATA_USER:admin}
+      password: ${OPENMETADATA_PASSWORD:admin}
+      glossary-name: GovernedAssets
+      seed: true
+      service-refresh-urls:
+        refund-service: http://localhost:8082
+        taxpayer-service: http://localhost:8083

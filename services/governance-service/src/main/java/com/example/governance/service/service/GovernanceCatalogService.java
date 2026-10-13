@@ -2,13 +2,16 @@ package com.example.governance.service.service;
 
 import com.example.governance.service.config.GovernanceDomainNamingRule;
 import com.example.governance.service.config.GovernanceNamingProperties;
+import com.example.governance.service.config.OpenMetadataProperties;
 import com.example.governance.service.dto.ConformanceIssue;
 import com.example.governance.service.dto.ConformanceReport;
 import com.example.governance.service.dto.GovernanceAssetDto;
 import com.example.governance.service.dto.GovernanceColumnMetadataDto;
+import com.example.governance.service.dto.GovernanceMetadataDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
 import com.example.governance.service.dto.GovernanceTableMetadataDto;
 import com.example.governance.service.entity.GovernanceAssetEntity;
+import com.example.governance.service.openmetadata.OpenMetadataClient;
 import com.example.governance.service.repository.GovernanceAssetRepository;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,13 +39,22 @@ public class GovernanceCatalogService {
 
     private final GovernanceAssetRepository repository;
     private final GovernanceNamingProperties namingProperties;
+    private final OpenMetadataProperties openMetadataProperties;
+    private final OpenMetadataClient openMetadataClient;
+    private final GovernanceRefreshNotifier refreshNotifier;
 
     public GovernanceCatalogService(
             GovernanceAssetRepository repository,
-            GovernanceNamingProperties namingProperties
+            GovernanceNamingProperties namingProperties,
+            OpenMetadataProperties openMetadataProperties,
+            OpenMetadataClient openMetadataClient,
+            GovernanceRefreshNotifier refreshNotifier
     ) {
         this.repository = repository;
         this.namingProperties = namingProperties;
+        this.openMetadataProperties = openMetadataProperties;
+        this.openMetadataClient = openMetadataClient;
+        this.refreshNotifier = refreshNotifier;
     }
 
     @Transactional
@@ -67,12 +79,18 @@ public class GovernanceCatalogService {
             entity.setFieldName(fieldName);
             entity.setTableName(dto.getTableName());
             entity.setColumnName(dto.getColumnName());
-            entity.setClassification(blankToNull(dto.getClassification()));
-            entity.setOwner(blankToNull(dto.getOwner()));
-            entity.setSteward(blankToNull(dto.getSteward()));
-            entity.setDomain(blankToNull(dto.getDomain()));
-            entity.setRetentionPolicy(blankToNull(dto.getRetentionPolicy()));
+            entity.setAssetId(blankToNull(dto.getAssetId()));
+            // Domain from asset id when present; otherwise accept synced domain for naming
+            String domain = blankToNull(dto.getDomain());
+            if (domain == null && entity.getAssetId() != null) {
+                domain = OpenMetadataClient.domainFromAssetId(entity.getAssetId());
+            }
+            entity.setDomain(domain);
             entity.setDescription(blankToNull(dto.getDescription()));
+            // Do not overwrite mirrored OM attributes from annotation sync (identity only)
+            if (dto.getMetadataVersion() != null) {
+                entity.setMetadataVersion(dto.getMetadataVersion());
+            }
             entity.setLastSeenAt(now);
             saved.add(repository.save(entity));
         }
@@ -88,8 +106,73 @@ public class GovernanceCatalogService {
     }
 
     /**
-     * Groups flat catalog rows into table → columns for browsing metadata.
+     * Resolve authoritative metadata for an asset id from OpenMetadata, optionally
+     * mirroring into identity rows that share that assetId.
      */
+    @Transactional
+    public GovernanceMetadataDto resolveAsset(String assetId) {
+        if (assetId == null || assetId.isBlank()) {
+            throw new IllegalArgumentException("assetId is required");
+        }
+        String id = assetId.trim();
+        Optional<GovernanceMetadataDto> fromOm = openMetadataClient.fetchAsset(id);
+        if (fromOm.isPresent()) {
+            GovernanceMetadataDto meta = fromOm.get();
+            mirrorToIdentity(meta);
+            return meta;
+        }
+        // Fallback: last-known projection from identity catalog
+        return repository.findAllByOrderByServiceNameAscEntityNameAscFieldNameAsc().stream()
+                .filter(a -> id.equals(a.getAssetId()) && isEntityLevel(a))
+                .findFirst()
+                .map(a -> new GovernanceMetadataDto(
+                        a.getAssetId(),
+                        a.getMetadataVersion() == null ? 0L : a.getMetadataVersion(),
+                        a.getOwner(),
+                        a.getSteward(),
+                        a.getDomain(),
+                        a.getClassification(),
+                        a.getRetentionPolicy(),
+                        a.getDescription()
+                ))
+                .orElseThrow(() -> new IllegalArgumentException("Unknown governed asset: " + id));
+    }
+
+    @Transactional
+    public void onRegistryAssetUpdated(String assetId) {
+        if (assetId == null || assetId.isBlank()) {
+            return;
+        }
+        try {
+            GovernanceMetadataDto meta = resolveAsset(assetId.trim());
+            refreshNotifier.notifyAssetUpdated(meta.assetId());
+        } catch (IllegalArgumentException ex) {
+            // unknown asset — still try fan-out for declared id
+            refreshNotifier.notifyAssetUpdated(assetId.trim());
+        }
+    }
+
+    private void mirrorToIdentity(GovernanceMetadataDto meta) {
+        List<GovernanceAssetEntity> rows = repository.findAllByOrderByServiceNameAscEntityNameAscFieldNameAsc();
+        Instant now = Instant.now();
+        for (GovernanceAssetEntity row : rows) {
+            if (!meta.assetId().equals(row.getAssetId()) || !isEntityLevel(row)) {
+                continue;
+            }
+            row.setOwner(blankToNull(meta.owner()));
+            row.setSteward(blankToNull(meta.steward()));
+            row.setClassification(blankToNull(meta.classification()));
+            row.setRetentionPolicy(blankToNull(meta.retentionPolicy()));
+            row.setDomain(blankToNull(meta.domain()));
+            if (meta.description() != null && !meta.description().isBlank()) {
+                row.setDescription(meta.description().trim());
+            }
+            row.setMetadataVersion(meta.version());
+            row.setLastSeenAt(now);
+            repository.save(row);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<GovernanceTableMetadataDto> listTables(String serviceName) {
         List<GovernanceAssetEntity> assets = list(serviceName);
@@ -99,15 +182,21 @@ public class GovernanceCatalogService {
             if (isEntityLevel(asset)) {
                 String key = tableKey(asset);
                 GovernanceTableMetadataDto table = tables.computeIfAbsent(key, k -> newTable(asset));
-                table.setServiceName(asset.getServiceName());
-                table.setTableName(asset.getTableName());
-                table.setEntityName(asset.getEntityName());
-                table.setOwner(asset.getOwner());
-                table.setSteward(asset.getSteward());
-                table.setDomain(asset.getDomain());
-                table.setClassification(asset.getClassification());
-                table.setRetentionPolicy(asset.getRetentionPolicy());
-                table.setDescription(asset.getDescription());
+                enrichTableFromEntity(table, asset);
+                // Overlay live OM metadata when available
+                if (asset.getAssetId() != null) {
+                    openMetadataClient.fetchAsset(asset.getAssetId()).ifPresent(meta -> {
+                        table.setOwner(meta.owner());
+                        table.setSteward(meta.steward());
+                        table.setClassification(meta.classification());
+                        table.setRetentionPolicy(meta.retentionPolicy());
+                        table.setDomain(meta.domain());
+                        table.setMetadataVersion(meta.version());
+                        if (meta.description() != null) {
+                            table.setDescription(meta.description());
+                        }
+                    });
+                }
             }
         }
 
@@ -130,11 +219,26 @@ public class GovernanceCatalogService {
         return new ArrayList<>(tables.values());
     }
 
+    private static void enrichTableFromEntity(GovernanceTableMetadataDto table, GovernanceAssetEntity asset) {
+        table.setServiceName(asset.getServiceName());
+        table.setTableName(asset.getTableName());
+        table.setEntityName(asset.getEntityName());
+        table.setAssetId(asset.getAssetId());
+        table.setOwner(asset.getOwner());
+        table.setSteward(asset.getSteward());
+        table.setDomain(asset.getDomain());
+        table.setClassification(asset.getClassification());
+        table.setRetentionPolicy(asset.getRetentionPolicy());
+        table.setDescription(asset.getDescription());
+        table.setMetadataVersion(asset.getMetadataVersion());
+    }
+
     private static GovernanceTableMetadataDto newTable(GovernanceAssetEntity asset) {
         GovernanceTableMetadataDto table = new GovernanceTableMetadataDto();
         table.setServiceName(asset.getServiceName());
         table.setTableName(asset.getTableName());
         table.setEntityName(asset.getEntityName());
+        table.setAssetId(asset.getAssetId());
         return table;
     }
 
@@ -143,11 +247,8 @@ public class GovernanceCatalogService {
     }
 
     /**
-     * Enforces catalog completeness and naming policy:
-     * - every ENTITY must declare {@code @DataGovernance} fields (owner, steward, domain,
-     *   classification, retentionPolicy)
-     * - domain must be in the configured allow-list and table name must match convention
-     * - classified FIELDs must resolve owner + domain (field or parent entity)
+     * App-level: {@code @GovernedAsset} identity + naming conventions.
+     * Registry-level: owner/steward/classification/retention present in OpenMetadata.
      */
     @Transactional(readOnly = true)
     public ConformanceReport conformance(String serviceName) {
@@ -167,31 +268,37 @@ public class GovernanceCatalogService {
         List<ConformanceIssue> issues = new ArrayList<>();
         for (GovernanceAssetEntity asset : assets) {
             if (isEntityLevel(asset)) {
-                issues.addAll(entityGovernanceIssues(asset));
-                if (!isBlank(asset.getDomain()) && namingProperties.isEnforce()) {
+                issues.addAll(entityIdentityIssues(asset));
+                String domain = asset.getDomain();
+                if (isBlank(domain) && !isBlank(asset.getAssetId())) {
+                    domain = OpenMetadataClient.domainFromAssetId(asset.getAssetId());
+                }
+                if (!isBlank(domain) && namingProperties.isEnforce()) {
+                    // temporary domain for naming check
+                    String previous = asset.getDomain();
+                    asset.setDomain(domain);
                     issues.addAll(namingIssues(service, asset));
+                    asset.setDomain(previous);
+                }
+                if (openMetadataProperties.isEnabled() && openMetadataProperties.isRequireRegistryAttributes()
+                        && !isBlank(asset.getAssetId())) {
+                    issues.addAll(registryAttributeIssues(asset));
                 }
                 continue;
             }
 
             if (!isBlank(asset.getClassification())) {
                 GovernanceAssetEntity parent = entitiesByName.get(asset.getEntityName());
-                String owner = firstNonBlank(asset.getOwner(), parent == null ? null : parent.getOwner());
                 String domain = firstNonBlank(asset.getDomain(), parent == null ? null : parent.getDomain());
-                if (isBlank(owner)) {
-                    issues.add(new ConformanceIssue(
-                            asset.getEntityName(),
-                            asset.getFieldName(),
-                            "OWNER_REQUIRED_FOR_CLASSIFIED_FIELD",
-                            "Classified field has no owner on field or parent entity"
-                    ));
+                if (isBlank(domain) && parent != null && !isBlank(parent.getAssetId())) {
+                    domain = OpenMetadataClient.domainFromAssetId(parent.getAssetId());
                 }
                 if (isBlank(domain)) {
                     issues.add(new ConformanceIssue(
                             asset.getEntityName(),
                             asset.getFieldName(),
                             "DOMAIN_REQUIRED_FOR_CLASSIFIED_FIELD",
-                            "Classified field has no domain on field or parent entity"
+                            "Classified field has no domain on field or parent entity asset id"
                     ));
                 }
             }
@@ -199,46 +306,54 @@ public class GovernanceCatalogService {
         return new ConformanceReport(service, issues.isEmpty(), issues);
     }
 
-    private static List<ConformanceIssue> entityGovernanceIssues(GovernanceAssetEntity asset) {
+    private List<ConformanceIssue> entityIdentityIssues(GovernanceAssetEntity asset) {
         List<ConformanceIssue> issues = new ArrayList<>();
-        if (isBlank(asset.getOwner())) {
+        if (isBlank(asset.getAssetId())) {
             issues.add(new ConformanceIssue(
                     asset.getEntityName(),
                     "",
-                    "OWNER_REQUIRED",
-                    "Entity is missing @DataGovernance.owner (or legacy @DataOwner)"
+                    "GOVERNED_ASSET_REQUIRED",
+                    "Entity is missing @GovernedAsset asset id"
             ));
         }
-        if (isBlank(asset.getSteward())) {
+        return issues;
+    }
+
+    private List<ConformanceIssue> registryAttributeIssues(GovernanceAssetEntity asset) {
+        List<ConformanceIssue> issues = new ArrayList<>();
+        Optional<GovernanceMetadataDto> meta = openMetadataClient.fetchAsset(asset.getAssetId());
+        if (meta.isEmpty()) {
             issues.add(new ConformanceIssue(
                     asset.getEntityName(),
                     "",
-                    "STEWARD_REQUIRED",
-                    "Entity is missing @DataGovernance.steward"
+                    "REGISTRY_ASSET_MISSING",
+                    "Governed asset '" + asset.getAssetId() + "' is not registered in OpenMetadata"
+            ));
+            return issues;
+        }
+        GovernanceMetadataDto m = meta.get();
+        if (isBlank(m.owner())) {
+            issues.add(new ConformanceIssue(
+                    asset.getEntityName(), "", "OWNER_REQUIRED",
+                    "OpenMetadata asset '" + asset.getAssetId() + "' is missing owner"
             ));
         }
-        if (isBlank(asset.getDomain())) {
+        if (isBlank(m.steward())) {
             issues.add(new ConformanceIssue(
-                    asset.getEntityName(),
-                    "",
-                    "DOMAIN_REQUIRED",
-                    "Entity is missing @DataGovernance.domain (or legacy @DataDomain)"
+                    asset.getEntityName(), "", "STEWARD_REQUIRED",
+                    "OpenMetadata asset '" + asset.getAssetId() + "' is missing steward"
             ));
         }
-        if (isBlank(asset.getClassification())) {
+        if (isBlank(m.classification())) {
             issues.add(new ConformanceIssue(
-                    asset.getEntityName(),
-                    "",
-                    "CLASSIFICATION_REQUIRED",
-                    "Entity is missing @DataGovernance.classification"
+                    asset.getEntityName(), "", "CLASSIFICATION_REQUIRED",
+                    "OpenMetadata asset '" + asset.getAssetId() + "' is missing classification"
             ));
         }
-        if (isBlank(asset.getRetentionPolicy())) {
+        if (isBlank(m.retentionPolicy())) {
             issues.add(new ConformanceIssue(
-                    asset.getEntityName(),
-                    "",
-                    "RETENTION_POLICY_REQUIRED",
-                    "Entity is missing @DataGovernance.retentionPolicy"
+                    asset.getEntityName(), "", "RETENTION_POLICY_REQUIRED",
+                    "OpenMetadata asset '" + asset.getAssetId() + "' is missing retentionPolicy"
             ));
         }
         return issues;
@@ -309,7 +424,6 @@ public class GovernanceCatalogService {
         return "^" + Pattern.quote(prefix) + "[A-Z0-9_]+$";
     }
 
-    /** API-facing field name: marker/blank → empty string. */
     public static String toApiFieldName(String storedFieldName) {
         return isEntityFieldName(storedFieldName) ? "" : storedFieldName;
     }

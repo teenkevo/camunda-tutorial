@@ -3,6 +3,7 @@ package com.example.governance.runtime.catalog;
 import com.example.governance.annotations.DataDomain;
 import com.example.governance.annotations.DataGovernance;
 import com.example.governance.annotations.DataOwner;
+import com.example.governance.annotations.GovernedAsset;
 import com.example.governance.annotations.Sensitive;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +19,9 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Component;
 
 /**
- * Scans JPA {@link Entity} classes for governance annotations and builds catalog payloads.
+ * Scans JPA {@link Entity} classes for governance identity ({@link GovernedAsset})
+ * and structural field annotations. Mutable attributes (owner, steward, …) are
+ * resolved from the external registry, not from annotations.
  */
 @Component
 public class GovernanceMetadataScanner {
@@ -42,14 +45,23 @@ public class GovernanceMetadataScanner {
         return assets;
     }
 
+    /** Asset ids declared via {@link GovernedAsset} on scanned entities. */
+    public List<String> scanAssetIds(Set<String> basePackages) {
+        return scan("local", basePackages).stream()
+                .filter(a -> "ENTITY".equals(a.getAssetType()))
+                .map(GovernanceAssetDto::getAssetId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+    }
+
     private List<GovernanceAssetDto> describeEntity(String serviceName, Class<?> type) {
         List<GovernanceAssetDto> assets = new ArrayList<>();
         Table table = type.getAnnotation(Table.class);
         String tableName = table != null && !table.name().isBlank() ? table.name() : type.getSimpleName();
 
-        DataGovernance governance = type.getAnnotation(DataGovernance.class);
-        DataOwner typeOwner = type.getAnnotation(DataOwner.class);
-        DataDomain typeDomain = type.getAnnotation(DataDomain.class);
+        GovernedAsset governed = type.getAnnotation(GovernedAsset.class);
+        DataGovernance legacy = type.getAnnotation(DataGovernance.class);
         Comment typeComment = type.getAnnotation(Comment.class);
 
         GovernanceAssetDto entityAsset = new GovernanceAssetDto();
@@ -59,21 +71,22 @@ public class GovernanceMetadataScanner {
         entityAsset.setFieldName("");
         entityAsset.setTableName(tableName);
 
-        if (governance != null) {
-            entityAsset.setOwner(governance.owner());
-            entityAsset.setSteward(governance.steward());
-            entityAsset.setDomain(governance.domain());
-            entityAsset.setClassification(governance.classification().name());
-            entityAsset.setRetentionPolicy(governance.retentionPolicy());
-        } else {
-            // Legacy fallback while migrating to @DataGovernance
-            if (typeOwner != null) {
-                entityAsset.setOwner(typeOwner.value());
-            }
-            if (typeDomain != null) {
-                entityAsset.setDomain(typeDomain.value());
+        if (governed != null && !governed.value().isBlank()) {
+            String assetId = governed.value().trim();
+            entityAsset.setAssetId(assetId);
+            entityAsset.setDomain(domainFromAssetId(assetId));
+        } else if (legacy != null) {
+            // Temporary bridge while migrating off @DataGovernance
+            entityAsset.setDomain(legacy.domain());
+            entityAsset.setOwner(legacy.owner());
+            entityAsset.setSteward(legacy.steward());
+            entityAsset.setClassification(legacy.classification().name());
+            entityAsset.setRetentionPolicy(legacy.retentionPolicy());
+            if (legacy.domain() != null && !legacy.domain().isBlank()) {
+                entityAsset.setAssetId(legacy.domain() + "." + type.getSimpleName());
             }
         }
+
         if (typeComment != null && !typeComment.value().isBlank()) {
             entityAsset.setDescription(typeComment.value().trim());
         }
@@ -101,6 +114,8 @@ public class GovernanceMetadataScanner {
                 fieldAsset.setFieldName(field.getName());
                 fieldAsset.setTableName(tableName);
                 fieldAsset.setColumnName(columnName);
+                fieldAsset.setAssetId(entityAsset.getAssetId());
+                fieldAsset.setDomain(entityAsset.getDomain());
                 if (sensitive != null) {
                     fieldAsset.setClassification(sensitive.value().name());
                 }
@@ -118,6 +133,18 @@ public class GovernanceMetadataScanner {
             current = current.getSuperclass();
         }
         return assets;
+    }
+
+    /** {@code refunds.application} → {@code refunds}. */
+    public static String domainFromAssetId(String assetId) {
+        if (assetId == null || assetId.isBlank()) {
+            return null;
+        }
+        int dot = assetId.indexOf('.');
+        if (dot <= 0) {
+            return assetId.trim();
+        }
+        return assetId.substring(0, dot).trim();
     }
 
     private static String toSnakeCase(String name) {

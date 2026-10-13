@@ -1,29 +1,67 @@
 package com.example.governance.service.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 import com.example.governance.service.config.GovernanceNamingProperties;
+import com.example.governance.service.config.OpenMetadataProperties;
 import com.example.governance.service.dto.ConformanceReport;
 import com.example.governance.service.dto.GovernanceAssetDto;
+import com.example.governance.service.dto.GovernanceMetadataDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
 import com.example.governance.service.dto.GovernanceTableMetadataDto;
+import com.example.governance.service.openmetadata.OpenMetadataClient;
 import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @DataJpaTest
 @Import(GovernanceCatalogService.class)
-@EnableConfigurationProperties(GovernanceNamingProperties.class)
+@EnableConfigurationProperties({GovernanceNamingProperties.class, OpenMetadataProperties.class})
+@TestPropertySource(properties = {
+        "app.governance.openmetadata.enabled=true",
+        "app.governance.openmetadata.require-registry-attributes=true",
+        "app.governance.openmetadata.seed=false"
+})
 class GovernanceCatalogServiceTest {
 
     @Autowired
     private GovernanceCatalogService catalogService;
 
+    @MockitoBean
+    private OpenMetadataClient openMetadataClient;
+
+    @MockitoBean
+    private GovernanceRefreshNotifier refreshNotifier;
+
+    @BeforeEach
+    void stubRegistry() {
+        when(openMetadataClient.isEnabled()).thenReturn(true);
+        when(openMetadataClient.fetchAsset(anyString())).thenAnswer(invocation -> {
+            String assetId = invocation.getArgument(0);
+            return Optional.of(new GovernanceMetadataDto(
+                    assetId,
+                    1L,
+                    "tax-ops",
+                    "Refund Data Management",
+                    "refunds",
+                    "PII",
+                    "REFUND_RETENTION",
+                    "Refund application business record"
+            ));
+        });
+    }
+
     @Test
-    void syncAndConformance_requiresFullDataGovernance() {
+    void syncAndConformance_requiresGovernedAssetAndRegistry() {
         GovernanceAssetDto entity = validRefundEntity();
         entity.setDescription("Refund application business record");
 
@@ -34,6 +72,8 @@ class GovernanceCatalogServiceTest {
         field.setTableName("RFND_APPL");
         field.setColumnName("first_name");
         field.setClassification("PII");
+        field.setAssetId("refunds.application");
+        field.setDomain("refunds");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity, field)));
 
@@ -42,18 +82,44 @@ class GovernanceCatalogServiceTest {
 
         List<GovernanceTableMetadataDto> tables = catalogService.listTables("refund-service");
         assertThat(tables).hasSize(1);
+        assertThat(tables.get(0).getAssetId()).isEqualTo("refunds.application");
         assertThat(tables.get(0).getSteward()).isEqualTo("Refund Data Management");
-        assertThat(tables.get(0).getRetentionPolicy()).isEqualTo("REFUND_RETENTION");
-        assertThat(tables.get(0).getClassification()).isEqualTo("PII");
         assertThat(tables.get(0).getColumns()).hasSize(1);
     }
 
     @Test
-    void conformance_failsWhenStewardMissing() {
+    void conformance_failsWhenGovernedAssetMissing() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setSteward(null);
+        entity.setAssetId(null);
+        entity.setDomain("refunds");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
+
+        ConformanceReport report = catalogService.conformance("refund-service");
+        assertThat(report.compliant()).isFalse();
+        assertThat(report.issues()).anyMatch(i -> "GOVERNED_ASSET_REQUIRED".equals(i.rule()));
+    }
+
+    @Test
+    void conformance_failsWhenRegistryAssetMissing() {
+        when(openMetadataClient.fetchAsset("refunds.application")).thenReturn(Optional.empty());
+
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(validRefundEntity())));
+
+        ConformanceReport report = catalogService.conformance("refund-service");
+        assertThat(report.compliant()).isFalse();
+        assertThat(report.issues()).anyMatch(i -> "REGISTRY_ASSET_MISSING".equals(i.rule()));
+    }
+
+    @Test
+    void conformance_failsWhenStewardMissingInRegistry() {
+        when(openMetadataClient.fetchAsset("refunds.application")).thenReturn(Optional.of(
+                new GovernanceMetadataDto(
+                        "refunds.application", 1L, "tax-ops", null, "refunds", "PII", "REFUND_RETENTION", null
+                )
+        ));
+
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(validRefundEntity())));
 
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
@@ -61,21 +127,16 @@ class GovernanceCatalogServiceTest {
     }
 
     @Test
-    void conformance_failsWhenRetentionMissing() {
-        GovernanceAssetDto entity = validRefundEntity();
-        entity.setRetentionPolicy(null);
-
-        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
-
-        ConformanceReport report = catalogService.conformance("refund-service");
-        assertThat(report.compliant()).isFalse();
-        assertThat(report.issues()).anyMatch(i -> "RETENTION_POLICY_REQUIRED".equals(i.rule()));
-    }
-
-    @Test
     void conformance_failsWhenDomainNotAllowed() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setDomain("unknown-domain");
+        entity.setAssetId("unknown-domain.thing");
+        entity.setDomain(null);
+
+        when(openMetadataClient.fetchAsset("unknown-domain.thing")).thenReturn(Optional.of(
+                new GovernanceMetadataDto(
+                        "unknown-domain.thing", 1L, "x", "y", "unknown-domain", "PII", "R", null
+                )
+        ));
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
@@ -102,11 +163,8 @@ class GovernanceCatalogServiceTest {
         entity.setEntityName("com.example.refund.entity.RefundApplicationEntity");
         entity.setFieldName("");
         entity.setTableName("RFND_APPL");
-        entity.setOwner("tax-ops");
-        entity.setSteward("Refund Data Management");
+        entity.setAssetId("refunds.application");
         entity.setDomain("refunds");
-        entity.setClassification("PII");
-        entity.setRetentionPolicy("REFUND_RETENTION");
         return entity;
     }
 }

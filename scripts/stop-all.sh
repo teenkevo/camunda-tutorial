@@ -46,9 +46,10 @@ for svc in "${SERVICES[@]}"; do
 done
 
 if [[ "${1:-}" == "--with-db" ]]; then
-  info "Stopping Oracle..."
-  (cd "$ROOT" && docker compose stop oracle)
-  ok "Oracle stopped"
+  info "Stopping Oracle + OpenMetadata..."
+  (cd "$ROOT" && docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml stop \
+    oracle openmetadata-server openmetadata-migrate openmetadata-mysql openmetadata-elasticsearch)
+  ok "Oracle + OpenMetadata stopped"
 fi
 
 ok "Done."

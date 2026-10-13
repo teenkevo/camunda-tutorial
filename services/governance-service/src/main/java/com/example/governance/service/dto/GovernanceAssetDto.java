@@ -11,10 +11,12 @@ public class GovernanceAssetDto {
     private String fieldName;
     private String tableName;
     private String columnName;
+    private String assetId;
     private String classification;
     private String owner;
     private String steward;
     private String domain;
     private String retentionPolicy;
     private String description;
+    private Long metadataVersion;
 }

@@ -11,8 +11,9 @@ import java.time.Instant;
 import lombok.Data;
 
 /**
- * Canonical governance catalog row. Lives only in the governance service database —
- * not as SQL comments on business tables.
+ * Identity catalog row: which service/entity maps to which governed asset id.
+ * Authoritative owner/steward/classification/retention live in OpenMetadata;
+ * mirrored columns are a last-known projection for browsing when OM is unreachable.
  */
 @Data
 @Entity
@@ -52,7 +53,11 @@ public class GovernanceAssetEntity {
     @Column(name = "column_name", length = 255)
     private String columnName;
 
-    /** PII / SENSITIVE / INTERNAL (entity default and/or field). */
+    /** Logical asset id from {@code @GovernedAsset}, e.g. {@code refunds.application}. */
+    @Column(name = "asset_id", length = 255)
+    private String assetId;
+
+    /** Mirrored from OpenMetadata (last-known). */
     @Column(length = 64)
     private String classification;
 
@@ -68,9 +73,12 @@ public class GovernanceAssetEntity {
     @Column(name = "retention_policy", length = 120)
     private String retentionPolicy;
 
-    /** Free-text description / remark (e.g. from {@code @Comment}). */
     @Column(length = 1000)
     private String description;
+
+    /** OpenMetadata entity version last mirrored. */
+    @Column(name = "metadata_version")
+    private Long metadataVersion;
 
     @Column(name = "last_seen_at", nullable = false)
     private Instant lastSeenAt = Instant.now();

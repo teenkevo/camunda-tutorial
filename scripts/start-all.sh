@@ -144,8 +144,10 @@ PY
   fi
 }
 
-info "Starting Oracle..."
-docker compose up -d oracle
+COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml)
+
+info "Starting Oracle + OpenMetadata..."
+"${COMPOSE[@]}" up -d oracle openmetadata-mysql openmetadata-elasticsearch openmetadata-migrate openmetadata-server
 
 info "Waiting for Oracle to become healthy..."
 ATTEMPTS=60
@@ -166,15 +168,34 @@ for ((i = 1; i <= ATTEMPTS; i++)); do
   sleep 5
 done
 
+info "Waiting for OpenMetadata API..."
+OM_ATTEMPTS=90
+for ((i = 1; i <= OM_ATTEMPTS; i++)); do
+  om_code="$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 http://localhost:8585/api/v1/system/version 2>/dev/null || true)"
+  if [[ "$om_code" == "200" ]]; then
+    ok "OpenMetadata is up (HTTP ${om_code})"
+    break
+  fi
+  if ((i == OM_ATTEMPTS)); then
+    warn "OpenMetadata not ready (last HTTP ${om_code}). Governance registry checks may fail until it is up."
+    warn "Check: docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml logs openmetadata-server"
+    break
+  fi
+  if ((i % 6 == 0)); then
+    dim "OpenMetadata status http=${om_code} (attempt ${i}/${OM_ATTEMPTS})..."
+  fi
+  sleep 5
+done
+
 info "Checking service schemas..."
-if ! docker compose exec -T oracle bash -lc \
+if ! "${COMPOSE[@]}" exec -T oracle bash -lc \
   'sqlplus -s refund_service/Refund_Pass_1@//localhost:1521/FREEPDB1 <<EOF
 WHENEVER SQLERROR EXIT FAILURE
 SELECT 1 FROM dual;
 EXIT;
 EOF' >/dev/null 2>&1; then
   warn "Schemas not ready yet — applying CREATE SESSION grants..."
-  docker compose exec -T oracle bash -lc 'sqlplus -s sys/Oracle_Pass_1@//localhost:1521/FREE as sysdba <<EOF
+  "${COMPOSE[@]}" exec -T oracle bash -lc 'sqlplus -s sys/Oracle_Pass_1@//localhost:1521/FREE as sysdba <<EOF
 ALTER SESSION SET CONTAINER = FREEPDB1;
 GRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,
       CREATE TABLE, CREATE TRIGGER, CREATE TYPE TO camunda_service;
@@ -229,14 +250,17 @@ print_conformance "taxpayer-service" || CONFORM_FAILED=1
 
 echo
 info "Done. Endpoints:"
-step "Camunda     http://localhost:8080  (demo/demo)"
-step "Governance  ${GOVERNANCE_URL}/api/governance/tables"
-step "Conformance ${GOVERNANCE_URL}/api/governance/conformance?service=refund-service"
-step "Refunds     http://localhost:8082/api/refund-applications"
-step "Taxpayer    http://localhost:8083/api/taxpayer-registrations"
+step "Camunda        http://localhost:8080  (demo/demo)"
+step "OpenMetadata   http://localhost:8585  (admin/admin)"
+step "Governance     ${GOVERNANCE_URL}/api/governance/tables"
+step "Asset resolve  ${GOVERNANCE_URL}/api/governance/assets/refunds.application"
+step "Conformance    ${GOVERNANCE_URL}/api/governance/conformance?service=refund-service"
+step "OM webhook     ${GOVERNANCE_URL}/api/governance/webhooks/openmetadata"
+step "Refunds        http://localhost:8082/api/refund-applications"
+step "Taxpayer       http://localhost:8083/api/taxpayer-registrations"
 echo
 dim "Logs:  ${LOG_DIR}/"
-dim "Stop:  scripts/stop-all.sh"
+dim "Stop:  scripts/stop-all.sh [--with-db]"
 
 if [[ "$CONFORM_FAILED" -ne 0 ]]; then
   echo

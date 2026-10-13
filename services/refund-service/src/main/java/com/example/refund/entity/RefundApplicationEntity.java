@@ -1,6 +1,6 @@
 package com.example.refund.entity;
 
-import com.example.governance.annotations.DataGovernance;
+import com.example.governance.annotations.GovernedAsset;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
@@ -16,14 +16,8 @@ import org.hibernate.annotations.Comment;
 
 @Data
 @Entity
-@Table(name = "REVT_APPL")
-@DataGovernance(
-        owner = "tax-ops",
-        steward = "Refund Data Management",
-        domain = "refunds",
-        classification = SensitiveType.PII,
-        retentionPolicy = "REFUND_RETENTION"
-)
+@Table(name = "RFND_APPL")
+@GovernedAsset("refunds.application")
 @Comment("Refund application business record")
 public class RefundApplicationEntity {
 

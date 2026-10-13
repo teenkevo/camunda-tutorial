@@ -1,6 +1,6 @@
 package com.example.governance.runtime.catalog;
 
-import com.example.governance.annotations.DataGovernance;
+import com.example.governance.annotations.GovernedAsset;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import jakarta.persistence.Entity;
@@ -9,13 +9,7 @@ import org.hibernate.annotations.Comment;
 
 @Entity
 @Table(name = "sample_thing")
-@DataGovernance(
-        owner = "tax-ops",
-        steward = "Refund Data Management",
-        domain = "refunds",
-        classification = SensitiveType.PII,
-        retentionPolicy = "REFUND_RETENTION"
-)
+@GovernedAsset("refunds.sample")
 @Comment("Sample table")
 class SampleCommentedEntity {
 

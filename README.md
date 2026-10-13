@@ -6,12 +6,14 @@
 camunda-tutorial/
 ├── db/oracle/                    # schema bootstrap SQL for Oracle 26ai
 ├── libs/
-│   ├── governance-annotations/
-│   ├── governance-runtime/
+│   ├── governance-annotations/   # @GovernedAsset, @Sensitive, …
+│   ├── governance-runtime/       # scan/publish, local metadata cache, refresh
 │   └── camunda-client/
+├── docker-compose.yml            # Oracle
+├── docker-compose.openmetadata.yml  # MySQL + ES + OpenMetadata
 └── services/
     ├── camunda-service/          # :8080 shared Camunda engine
-    ├── governance-service/       # :8081 governance catalog
+    ├── governance-service/       # :8081 identity catalog + OpenMetadata facade
     ├── refund-service/           # :8082 refund domain API + data
     └── taxpayer-service/         # :8083 taxpayer domain API + data
 ```
@@ -38,20 +40,49 @@ docker compose up -d oracle
 # first boot runs db/oracle/init/01-create-schemas.sh (createAppUser in FREEPDB1)
 ```
 
-If you already created users and see `CREATE SESSION privilege` denied, fix grants:
+## Hybrid governance (identity in code, attributes in OpenMetadata)
 
-```bash
-docker compose exec oracle sqlplus -s sys/Oracle_Pass_1@//localhost:1521/FREE as sysdba @/opt/oracle/scripts/02-fix-session-grants.sql
+Governance attributes (owner, steward, classification, retention) change independently of application releases. The hybrid model:
+
+1. **Code** declares asset identity only: `@GovernedAsset("refunds.application")`.
+2. **Domain** for naming is derived from the asset id prefix (`refunds`).
+3. **OpenMetadata** stores mutable attributes on glossary terms under `GovernedAssets`.
+4. **governance-service** is the facade: syncs identity, resolves metadata from OM, runs conformance.
+5. **Domain services** cache resolved metadata and refresh via webhook / poll — **no restart** when ownership changes.
+
+```java
+@Entity
+@Table(name = "RFND_APPL")
+@GovernedAsset("refunds.application")
+public class RefundApplicationEntity { … }
 ```
 
-Or copy/run `db/oracle/02-fix-session-grants.sql` / `01-create-schemas.sql` as SYSDBA on `FREE` (script switches to `FREEPDB1`).
+| Lives in code | Lives in OpenMetadata |
+|---------------|------------------------|
+| `@GovernedAsset` id | owner, steward |
+| `@Table` name (naming check) | classification, retention |
+| `@Sensitive` / `@Comment` | versioned updates |
 
-Fresh volume (re-init schemas from scratch):
+### OpenMetadata stack
 
 ```bash
-docker compose down -v
-docker compose up -d oracle
+docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml up -d
+# UI http://localhost:8585  — admin / admin
 ```
+
+Prerequisites in compose: MySQL (`openmetadata/db`), Elasticsearch 8.10, migrate job, `openmetadata/server` (no Airflow).
+
+Configure an OpenMetadata **generic alert** destination to  
+`http://host.docker.internal:8081/api/governance/webhooks/openmetadata`  
+so attribute changes fan out to service caches. Services also poll every 60s as a fallback.
+
+### Governance update lifecycle
+
+1. Admin updates owner for `refunds.application` in OpenMetadata (UI or API).
+2. OM persists a new entity version.
+3. Alert/webhook hits governance-service (or wait for poll).
+4. Domain services `POST /internal/governance/refresh?assetId=…` and atomically replace cache when `latest.version >= current.version`.
+5. New requests use updated rules — no redeploy.
 
 ## Runtime flow (domain APIs first)
 
@@ -63,10 +94,9 @@ docker compose up -d oracle
 ## Start everything
 
 ```bash
-cd /Users/administrator/IdeaProjects/camunda-tutorial
-./scripts/start-all.sh          # Oracle + all 4 services
-./scripts/stop-all.sh           # stop services (DB keeps running)
-./scripts/stop-all.sh --with-db # stop services + Oracle container
+./scripts/start-all.sh          # Oracle + OpenMetadata + all 4 services
+./scripts/stop-all.sh           # stop services (containers keep running)
+./scripts/stop-all.sh --with-db # stop services + Oracle + OpenMetadata
 ```
 
 Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am spring-boot:run` per terminal.
@@ -76,14 +106,16 @@ Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am
 | Service | URL |
 |---------|-----|
 | Camunda Cockpit | http://localhost:8080 (`demo`/`demo`) |
-| Governance tables (metadata) | http://localhost:8081/api/governance/tables |
-| Governance flat assets | http://localhost:8081/api/governance/assets |
+| OpenMetadata | http://localhost:8585 (`admin`/`admin`) |
+| Governance tables | http://localhost:8081/api/governance/tables |
+| Resolve asset | http://localhost:8081/api/governance/assets/refunds.application |
+| Conformance | http://localhost:8081/api/governance/conformance?service=refund-service |
+| OM webhook | http://localhost:8081/api/governance/webhooks/openmetadata |
 | Refunds API | http://localhost:8082/api/refund-applications |
 | Taxpayer API | http://localhost:8083/api/taxpayer-registrations |
 
-- **Entity governance**: declare `@DataGovernance(owner, steward, domain, classification, retentionPolicy)` on every JPA entity.
-- **Governance catalog** (`/api/governance/tables`): stores that metadata (+ field sensitivity).
-- **Naming policy** (`/api/governance/naming-domains`): allow-listed domains + table prefixes (`REG_`, `RFND_`, …).
+- **Naming policy** (`/api/governance/naming-domains`): allow-listed domains + table prefixes (`REG_`, `RFND_`, …) — still enforced in the application / governance-service.
 - **Oracle `COMMENT ON`**: only `@Comment` text (applied on domain-service startup).
 
-Missing `@DataGovernance` fields, unknown domains, or bad table names fail `GET /api/governance/conformance?service=…`. Configure domains in `app.governance.naming`.
+Missing `@GovernedAsset`, unknown domains, bad table names, or missing OpenMetadata attributes fail  
+`GET /api/governance/conformance?service=…`.

@@ -22,3 +22,4 @@ public class GovernanceCatalogProperties {
     /** Fail startup when conformance report is non-compliant. */
     private boolean failOnNonCompliant = false;
 }
+
