@@ -46,9 +46,11 @@ Governance attributes (owner, steward, classification, retention) change indepen
 
 1. **Code** declares asset identity only: `@GovernedAsset("refunds.application")`.
 2. **Domain** for naming is derived from the asset id prefix (`refunds`).
-3. **OpenMetadata** stores mutable attributes on glossary terms under `GovernedAssets`.
+3. **OpenMetadata** stores mutable attributes (create glossary terms / tags in the OM UI as needed).
 4. **governance-service** is the facade: syncs identity, resolves metadata from OM, runs conformance.
 5. **Domain services** cache resolved metadata and refresh via webhook / poll — **no restart** when ownership changes.
+
+Startup does **not** auto-seed OpenMetadata glossary terms (`app.governance.openmetadata.seed=false`). Set `seed: true` only if you want the demo seed runner.
 
 ```java
 @Entity
@@ -97,6 +99,9 @@ so attribute changes fan out to service caches. Services also poll every 60s as 
 ./scripts/start-all.sh          # Oracle + OpenMetadata + all 4 services
 ./scripts/stop-all.sh           # stop services (containers keep running)
 ./scripts/stop-all.sh --with-db # stop services + Oracle + OpenMetadata
+
+# Demo helpers (see scripts/demo/)
+./scripts/demo/reset-openmetadata.sh --yes   # wipe OM catalog, keep Oracle
 ```
 
 Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am spring-boot:run` per terminal.

@@ -52,7 +52,8 @@ app:
       username: ${OPENMETADATA_USER:admin}
       password: ${OPENMETADATA_PASSWORD:admin}
       glossary-name: GovernedAssets
-      seed: true
+      # Do not auto-create glossary terms / classifications in OpenMetadata on startup
+      seed: false
       service-refresh-urls:
         refund-service: http://localhost:8082
         taxpayer-service: http://localhost:8083

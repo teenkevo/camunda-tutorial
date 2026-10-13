@@ -26,8 +26,8 @@ public class OpenMetadataProperties {
     /** Glossary that holds governed asset terms. */
     private String glossaryName = "GovernedAssets";
 
-    /** Seed glossary + demo terms on startup. */
-    private boolean seed = true;
+    /** Seed glossary + demo terms on startup (off by default; manage assets in OpenMetadata UI). */
+    private boolean seed = false;
 
     /**
      * serviceName → base URL used to POST /internal/governance/refresh after OM changes.

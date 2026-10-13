@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Order(50)
-@ConditionalOnProperty(prefix = "app.governance.openmetadata", name = "seed", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "app.governance.openmetadata", name = "seed", havingValue = "true", matchIfMissing = false)
 public class OpenMetadataSeedRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(OpenMetadataSeedRunner.class);
