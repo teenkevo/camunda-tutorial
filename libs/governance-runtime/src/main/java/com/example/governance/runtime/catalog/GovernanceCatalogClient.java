@@ -26,9 +26,19 @@ public class GovernanceCatalogClient {
     public void sync(GovernanceSyncRequest request) {
         String url = trimSlash(properties.getBaseUrl()) + "/api/governance/sync";
         restTemplate.postForObject(url, request, GovernanceAssetDto[].class);
-        log.info("Published {} governance assets for service {}",
+        log.info("Published {} governance assets and {} validations for service {}",
                 request.assets() == null ? 0 : request.assets().size(),
+                request.validations() == null ? 0 : request.validations().size(),
                 request.serviceName());
+    }
+
+    public List<GovernanceValidationDto> listValidations(String serviceName) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(trimSlash(properties.getBaseUrl()) + "/api/governance/validations")
+                .queryParam("service", serviceName)
+                .toUriString();
+        GovernanceValidationDto[] body = restTemplate.getForObject(url, GovernanceValidationDto[].class);
+        return body == null ? List.of() : Arrays.asList(body);
     }
 
     public ConformanceReport conformance(String serviceName) {

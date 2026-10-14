@@ -26,6 +26,14 @@ logging:
 # Allow-listed data domains and physical table naming. Entities outside this fail conformance.
 app:
   governance:
+    catalog:
+      service-name: governance-service
+      base-url: ${GOVERNANCE_URL:http://localhost:8081}
+      # Self-publish identity + apply Oracle COMMENT ON from @Comment
+      publish-on-startup: true
+      fail-on-error: false
+      fail-on-non-compliant: false
+      scan-packages: com.example.governance.service
     naming:
       enforce: true
       domains:

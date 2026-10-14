@@ -22,10 +22,14 @@ public class CreateApplicationDelegate implements JavaDelegate {
         body.put("processInstanceId", execution.getProcessInstanceId());
         body.put("firstName", execution.getVariable("firstName"));
         body.put("lastName", execution.getVariable("lastName"));
+        body.put("taxTypes", execution.getVariable("taxTypes"));
 
         Map<?, ?> result = domainServiceClient.postRefund("/internal/refund-process/create", body);
         execution.setVariable("applicationId", result.get("applicationId"));
         execution.setVariable("applicationStatus", result.get("applicationStatus"));
         execution.setVariable("createdAt", result.get("createdAt"));
+        if (result.get("taxTypes") != null) {
+            execution.setVariable("taxTypes", result.get("taxTypes"));
+        }
     }
 }

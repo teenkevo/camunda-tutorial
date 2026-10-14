@@ -38,6 +38,7 @@ public class RefundApplicationService {
         entity.setProcessInstanceId(request.getProcessInstanceId());
         entity.setFirstName(request.getFirstName());
         entity.setLastName(request.getLastName());
+        entity.setTaxTypes(request.getTaxTypes() == null ? List.of() : List.copyOf(request.getTaxTypes()));
         entity.setStatus("CREATED");
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
@@ -47,6 +48,7 @@ public class RefundApplicationService {
         response.setApplicationId(applicationId);
         response.setApplicationStatus("CREATED");
         response.setCreatedAt(now.toString());
+        response.setTaxTypes(entity.getTaxTypes());
         return response;
     }
 

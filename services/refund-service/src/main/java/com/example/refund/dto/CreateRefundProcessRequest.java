@@ -2,6 +2,7 @@ package com.example.refund.dto;
 
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -13,4 +14,6 @@ public class CreateRefundProcessRequest {
 
     @Sensitive(SensitiveType.PII)
     private String lastName;
+
+    private List<String> taxTypes;
 }

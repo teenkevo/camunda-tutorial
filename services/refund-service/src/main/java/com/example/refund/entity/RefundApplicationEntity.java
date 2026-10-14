@@ -4,13 +4,17 @@ import com.example.governance.annotations.GovernedAsset;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
+import com.example.refund.persistence.StringListConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Data;
 import org.hibernate.annotations.Comment;
 
@@ -40,6 +44,11 @@ public class RefundApplicationEntity {
     @Sensitive(SensitiveType.PII)
     @Comment("Taxpayer family name")
     private String lastName;
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "tax_types", length = 120)
+    @Comment("Tax types claimed on the refund (VAT, PAYE, CIT, WHT)")
+    private List<String> taxTypes = new ArrayList<>();
 
     @Comment("Document reference number assigned during processing")
     private String drn;

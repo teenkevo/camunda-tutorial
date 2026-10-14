@@ -1,5 +1,6 @@
 package com.example.refund.dto;
 
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -7,6 +8,7 @@ public class RefundProcessStepResponse {
     private String applicationId;
     private String applicationStatus;
     private String createdAt;
+    private List<String> taxTypes;
     private String drn;
     private String station;
     private String riskLevel;

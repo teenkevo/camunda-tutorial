@@ -8,7 +8,9 @@ import com.example.governance.service.dto.GovernanceDomainNamingDto;
 import com.example.governance.service.dto.GovernanceMetadataDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
 import com.example.governance.service.dto.GovernanceTableMetadataDto;
+import com.example.governance.service.dto.GovernanceValidationDto;
 import com.example.governance.service.entity.GovernanceAssetEntity;
+import com.example.governance.service.entity.GovernanceValidationEntity;
 import com.example.governance.service.service.GovernanceCatalogService;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +68,21 @@ public class GovernanceCatalogController {
     @GetMapping("/tables")
     public List<GovernanceTableMetadataDto> tables(@RequestParam(value = "service", required = false) String service) {
         return catalogService.listTables(service);
+    }
+
+    @GetMapping("/validations")
+    public List<GovernanceValidationDto> validations(
+            @RequestParam(value = "service", required = false) String service
+    ) {
+        return catalogService.listValidations(service).stream().map(this::toValidationDto).toList();
+    }
+
+    @GetMapping("/validations/{validationId:.+}")
+    public GovernanceValidationDto validationById(@PathVariable("validationId") String validationId) {
+        return catalogService.findValidation(validationId)
+                .map(this::toValidationDto)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Unknown validation: " + validationId));
     }
 
     @GetMapping("/conformance")
@@ -177,6 +194,22 @@ public class GovernanceCatalogController {
         dto.setRetentionPolicy(entity.getRetentionPolicy());
         dto.setDescription(entity.getDescription());
         dto.setMetadataVersion(entity.getMetadataVersion());
+        return dto;
+    }
+
+    private GovernanceValidationDto toValidationDto(GovernanceValidationEntity entity) {
+        GovernanceValidationDto dto = new GovernanceValidationDto();
+        dto.setServiceName(entity.getServiceName());
+        dto.setValidationId(entity.getValidationId());
+        dto.setDtoType(entity.getDtoType());
+        dto.setFieldName(entity.getFieldName());
+        dto.setConstraintName(entity.getConstraintName());
+        dto.setConstraintType(entity.getConstraintType());
+        dto.setMessage(entity.getMessage());
+        dto.setControllerType(entity.getControllerType());
+        dto.setControllerMethod(entity.getControllerMethod());
+        dto.setHttpMethod(entity.getHttpMethod());
+        dto.setRequestPath(entity.getRequestPath());
         return dto;
     }
 }
