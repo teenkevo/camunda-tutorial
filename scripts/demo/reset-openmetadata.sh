@@ -100,14 +100,5 @@ fi
 
 echo
 ok "OpenMetadata is ready for a fresh demo"
-step "UI:       http://localhost:8585   (admin / admin)"
+step "UI:       http://localhost:8585   (admin@open-metadata.org / admin)"
 step "Airflow:  http://localhost:8084   (admin / admin)"
-echo
-info "Suggested next steps for the demo"
-step "1. Settings → Services → Databases → Add Oracle"
-step "2. Connection: OM_CATALOG / Om_Catalog_Pass_1 @ host.docker.internal:1521"
-step "3. Service Name FREEPDB1, schema e.g. REFUND_SERVICE, Use DBA Tables on"
-step "4. Schema include: ^(REFUND_SERVICE|TAXPAYER_SERVICE|GOVERNANCE_SERVICE|CAMUNDA_SERVICE)\$"
-step "5. Deploy metadata ingestion, then add profiler / DQ tests as needed"
-echo
-dim "Note: governance-service does not auto-seed glossary terms (seed=false)."
