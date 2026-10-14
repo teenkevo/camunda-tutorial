@@ -11,6 +11,8 @@ import com.example.governance.service.dto.GovernanceAssetDto;
 import com.example.governance.service.dto.GovernanceMetadataDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
 import com.example.governance.service.dto.GovernanceTableMetadataDto;
+import com.example.governance.service.dto.GovernanceValidationDto;
+import com.example.governance.service.entity.GovernanceValidationEntity;
 import com.example.governance.service.openmetadata.OpenMetadataClient;
 import java.util.List;
 import java.util.Optional;
@@ -155,6 +157,44 @@ class GovernanceCatalogServiceTest {
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
         assertThat(report.issues()).anyMatch(i -> "TABLE_NAME_CONVENTION".equals(i.rule()));
+    }
+
+    @Test
+    void sync_upsertsDiscoveredRequestValidations() {
+        GovernanceValidationDto validation = new GovernanceValidationDto();
+        validation.setValidationId("refund-service.RefundApplicationRequest.firstName.NotBlank");
+        validation.setDtoType("com.example.refund.dto.RefundApplicationRequest");
+        validation.setFieldName("firstName");
+        validation.setConstraintName("NotBlank");
+        validation.setConstraintType("jakarta.validation.constraints.NotBlank");
+        validation.setMessage("firstName is required");
+        validation.setControllerType("com.example.refund.controller.RefundApplicationController");
+        validation.setControllerMethod("start");
+        validation.setHttpMethod("POST");
+        validation.setRequestPath("/api/refund-applications");
+
+        catalogService.sync(new GovernanceSyncRequest(
+                "refund-service",
+                List.of(validRefundEntity()),
+                List.of(validation)
+        ));
+
+        List<GovernanceValidationEntity> listed = catalogService.listValidations("refund-service");
+        assertThat(listed).hasSize(1);
+        assertThat(listed.get(0).getValidationId())
+                .isEqualTo("refund-service.RefundApplicationRequest.firstName.NotBlank");
+        assertThat(listed.get(0).getConstraintName()).isEqualTo("NotBlank");
+
+        validation.setMessage("updated message");
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(), List.of(validation)));
+
+        assertThat(catalogService.listValidations("refund-service")).hasSize(1);
+        assertThat(catalogService.findValidation(
+                "refund-service.RefundApplicationRequest.firstName.NotBlank"))
+                .isPresent()
+                .get()
+                .extracting(GovernanceValidationEntity::getMessage)
+                .isEqualTo("updated message");
     }
 
     private static GovernanceAssetDto validRefundEntity() {

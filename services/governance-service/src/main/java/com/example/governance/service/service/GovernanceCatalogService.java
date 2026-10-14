@@ -10,9 +10,12 @@ import com.example.governance.service.dto.GovernanceColumnMetadataDto;
 import com.example.governance.service.dto.GovernanceMetadataDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
 import com.example.governance.service.dto.GovernanceTableMetadataDto;
+import com.example.governance.service.dto.GovernanceValidationDto;
 import com.example.governance.service.entity.GovernanceAssetEntity;
+import com.example.governance.service.entity.GovernanceValidationEntity;
 import com.example.governance.service.openmetadata.OpenMetadataClient;
 import com.example.governance.service.repository.GovernanceAssetRepository;
+import com.example.governance.service.repository.GovernanceValidationRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +41,7 @@ public class GovernanceCatalogService {
     public static final String ENTITY_FIELD_MARKER = "__ENTITY__";
 
     private final GovernanceAssetRepository repository;
+    private final GovernanceValidationRepository validationRepository;
     private final GovernanceNamingProperties namingProperties;
     private final OpenMetadataProperties openMetadataProperties;
     private final OpenMetadataClient openMetadataClient;
@@ -45,12 +49,14 @@ public class GovernanceCatalogService {
 
     public GovernanceCatalogService(
             GovernanceAssetRepository repository,
+            GovernanceValidationRepository validationRepository,
             GovernanceNamingProperties namingProperties,
             OpenMetadataProperties openMetadataProperties,
             OpenMetadataClient openMetadataClient,
             GovernanceRefreshNotifier refreshNotifier
     ) {
         this.repository = repository;
+        this.validationRepository = validationRepository;
         this.namingProperties = namingProperties;
         this.openMetadataProperties = openMetadataProperties;
         this.openMetadataClient = openMetadataClient;
@@ -65,36 +71,88 @@ public class GovernanceCatalogService {
         String serviceName = request.serviceName().trim();
         Instant now = Instant.now();
         List<GovernanceAssetEntity> saved = new ArrayList<>();
-        if (request.assets() == null) {
+        if (request.assets() != null) {
+            for (GovernanceAssetDto dto : request.assets()) {
+                String fieldName = normalizeFieldName(dto.getFieldName(), dto.getAssetType());
+                GovernanceAssetEntity entity = repository
+                        .findByServiceNameAndEntityNameAndFieldName(serviceName, dto.getEntityName(), fieldName)
+                        .orElseGet(GovernanceAssetEntity::new);
+                entity.setServiceName(serviceName);
+                entity.setAssetType(dto.getAssetType() == null ? inferType(fieldName) : dto.getAssetType());
+                entity.setEntityName(dto.getEntityName());
+                entity.setFieldName(fieldName);
+                entity.setTableName(dto.getTableName());
+                entity.setColumnName(dto.getColumnName());
+                entity.setAssetId(blankToNull(dto.getAssetId()));
+                // Domain from asset id when present; otherwise accept synced domain for naming
+                String domain = blankToNull(dto.getDomain());
+                if (domain == null && entity.getAssetId() != null) {
+                    domain = OpenMetadataClient.domainFromAssetId(entity.getAssetId());
+                }
+                entity.setDomain(domain);
+                entity.setDescription(blankToNull(dto.getDescription()));
+                // Do not overwrite mirrored OM attributes from annotation sync (identity only)
+                if (dto.getMetadataVersion() != null) {
+                    entity.setMetadataVersion(dto.getMetadataVersion());
+                }
+                entity.setLastSeenAt(now);
+                saved.add(repository.save(entity));
+            }
+        }
+        syncValidations(serviceName, request.validations(), now);
+        return saved;
+    }
+
+    @Transactional
+    public List<GovernanceValidationEntity> syncValidations(
+            String serviceName,
+            List<GovernanceValidationDto> validations,
+            Instant now
+    ) {
+        List<GovernanceValidationEntity> saved = new ArrayList<>();
+        if (validations == null || validations.isEmpty()) {
             return saved;
         }
-        for (GovernanceAssetDto dto : request.assets()) {
-            String fieldName = normalizeFieldName(dto.getFieldName(), dto.getAssetType());
-            GovernanceAssetEntity entity = repository
-                    .findByServiceNameAndEntityNameAndFieldName(serviceName, dto.getEntityName(), fieldName)
-                    .orElseGet(GovernanceAssetEntity::new);
+        Instant seenAt = now == null ? Instant.now() : now;
+        for (GovernanceValidationDto dto : validations) {
+            String validationId = blankToNull(dto.getValidationId());
+            if (validationId == null) {
+                throw new IllegalArgumentException("validationId is required");
+            }
+            GovernanceValidationEntity entity = validationRepository
+                    .findByValidationId(validationId)
+                    .orElseGet(GovernanceValidationEntity::new);
+            entity.setValidationId(validationId);
             entity.setServiceName(serviceName);
-            entity.setAssetType(dto.getAssetType() == null ? inferType(fieldName) : dto.getAssetType());
-            entity.setEntityName(dto.getEntityName());
-            entity.setFieldName(fieldName);
-            entity.setTableName(dto.getTableName());
-            entity.setColumnName(dto.getColumnName());
-            entity.setAssetId(blankToNull(dto.getAssetId()));
-            // Domain from asset id when present; otherwise accept synced domain for naming
-            String domain = blankToNull(dto.getDomain());
-            if (domain == null && entity.getAssetId() != null) {
-                domain = OpenMetadataClient.domainFromAssetId(entity.getAssetId());
-            }
-            entity.setDomain(domain);
-            entity.setDescription(blankToNull(dto.getDescription()));
-            // Do not overwrite mirrored OM attributes from annotation sync (identity only)
-            if (dto.getMetadataVersion() != null) {
-                entity.setMetadataVersion(dto.getMetadataVersion());
-            }
-            entity.setLastSeenAt(now);
-            saved.add(repository.save(entity));
+            entity.setDtoType(blankToNull(dto.getDtoType()));
+            entity.setFieldName(blankToNull(dto.getFieldName()));
+            entity.setConstraintName(blankToNull(dto.getConstraintName()));
+            entity.setConstraintType(blankToNull(dto.getConstraintType()));
+            entity.setMessage(blankToNull(dto.getMessage()));
+            entity.setControllerType(blankToNull(dto.getControllerType()));
+            entity.setControllerMethod(blankToNull(dto.getControllerMethod()));
+            entity.setHttpMethod(blankToNull(dto.getHttpMethod()));
+            entity.setRequestPath(blankToNull(dto.getRequestPath()));
+            entity.setLastSeenAt(seenAt);
+            saved.add(validationRepository.save(entity));
         }
         return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public List<GovernanceValidationEntity> listValidations(String serviceName) {
+        if (serviceName == null || serviceName.isBlank()) {
+            return validationRepository.findAllByOrderByServiceNameAscValidationIdAsc();
+        }
+        return validationRepository.findByServiceNameOrderByValidationIdAsc(serviceName.trim());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<GovernanceValidationEntity> findValidation(String validationId) {
+        if (validationId == null || validationId.isBlank()) {
+            return Optional.empty();
+        }
+        return validationRepository.findByValidationId(validationId.trim());
     }
 
     @Transactional(readOnly = true)

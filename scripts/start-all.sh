@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Start Oracle (Docker) and all Spring Boot microservices, then print governance conformance.
+# Start Oracle (Docker) and all Spring Boot microservices, then print governance
+# conformance and Bean Validation constraints sniffed from @Valid request DTOs.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -144,6 +145,59 @@ PY
   fi
 }
 
+# Bean Validation constraints sniffed from @Valid @RequestBody DTOs at domain startup.
+print_validations() {
+  local service="$1"
+  local url="${GOVERNANCE_URL}/api/governance/validations?service=${service}"
+  echo
+  info "Request validations sniffed: ${service}"
+  dim "Source: @Valid @RequestBody DTOs → id {service}.{Dto}.{field}.{Constraint}"
+  if ! body="$(curl -sf "$url")"; then
+    fail "FAILED to call ${url}"
+    return 1
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    GREEN="$C_GREEN" RESET="$C_RESET" DIM="$C_DIM" CYAN="$C_CYAN" \
+    python3 - "$body" <<'PY'
+import json, os, sys
+
+rows = json.loads(sys.argv[1])
+green = os.environ.get("GREEN", "")
+reset = os.environ.get("RESET", "")
+dim = os.environ.get("DIM", "")
+cyan = os.environ.get("CYAN", "")
+
+if not rows:
+    sys.exit(0)
+
+print(f"    count: {green}{len(rows)}{reset}")
+for row in rows:
+    vid = row.get("validationId") or "?"
+    field = row.get("fieldName") or ""
+    constraint = row.get("constraintName") or ""
+    path = row.get("requestPath") or ""
+    method = row.get("httpMethod") or ""
+    msg = row.get("message") or ""
+    where = f"{method} {path}".strip()
+    detail = f"{field}.{constraint}" if field and constraint else constraint or field
+    print(f"      {cyan}•{reset} {vid}")
+    extra = []
+    if where:
+        extra.append(where)
+    if detail:
+        extra.append(detail)
+    if msg:
+        extra.append(msg)
+    if extra:
+        print(f"        {dim}{' | '.join(extra)}{reset}")
+sys.exit(0)
+PY
+  else
+    step "${body}"
+  fi
+}
+
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml)
 
 info "Starting Oracle + OpenMetadata..."
@@ -248,17 +302,24 @@ CONFORM_FAILED=0
 print_conformance "refund-service" || CONFORM_FAILED=1
 print_conformance "taxpayer-service" || CONFORM_FAILED=1
 
+print_validations "refund-service" || true
+print_validations "taxpayer-service" || true
+
 echo
 info "Done. Endpoints:"
 step "Camunda        http://localhost:8080  (demo/demo)"
 step "OpenMetadata   http://localhost:8585  (admin/admin)"
 step "Governance     ${GOVERNANCE_URL}/api/governance/tables"
+step "Validations    ${GOVERNANCE_URL}/api/governance/validations"
+step "  (sniffed BV) ${GOVERNANCE_URL}/api/governance/validations?service=refund-service"
 step "Asset resolve  ${GOVERNANCE_URL}/api/governance/assets/refunds.application"
 step "Conformance    ${GOVERNANCE_URL}/api/governance/conformance?service=refund-service"
 step "OM webhook     ${GOVERNANCE_URL}/api/governance/webhooks/openmetadata"
 step "Refunds        http://localhost:8082/api/refund-applications"
 step "Taxpayer       http://localhost:8083/api/taxpayer-registrations"
 echo
+dim "Validation sniffing: domain services scan @Valid request DTOs at startup and sync"
+dim "  ids like refund-service.RefundApplicationRequest.firstName.NotBlank"
 dim "Logs:  ${LOG_DIR}/"
 dim "Stop:  scripts/stop-all.sh [--with-db]"
 

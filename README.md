@@ -64,6 +64,16 @@ public class RefundApplicationEntity { … }
 | `@GovernedAsset` id | owner, steward |
 | `@Table` name (naming check) | classification, retention |
 | `@Sensitive` / `@Comment` | versioned updates |
+| Bean Validation on `@Valid` request DTOs | (catalog only; OM test-case hook later) |
+
+### Request validation catalog
+
+Domain services discover Jakarta Bean Validation constraints on `@Valid @RequestBody` DTOs at startup and sync them to governance-service.
+
+Stable id format: `{service}.{DtoSimpleName}.{propertyPath}.{ConstraintSimpleName}`  
+Example: `refund-service.RefundApplicationRequest.firstName.NotBlank`
+
+Browse: `GET /api/governance/validations?service=refund-service`
 
 ### OpenMetadata stack
 
@@ -113,6 +123,7 @@ Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am
 | Camunda Cockpit | http://localhost:8080 (`demo`/`demo`) |
 | OpenMetadata | http://localhost:8585 (`admin`/`admin`) |
 | Governance tables | http://localhost:8081/api/governance/tables |
+| Validation catalog | http://localhost:8081/api/governance/validations |
 | Resolve asset | http://localhost:8081/api/governance/assets/refunds.application |
 | Conformance | http://localhost:8081/api/governance/conformance?service=refund-service |
 | OM webhook | http://localhost:8081/api/governance/webhooks/openmetadata |
