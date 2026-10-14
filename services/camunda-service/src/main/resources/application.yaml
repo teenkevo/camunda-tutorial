@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: camunda-service
+  datasource:
+    # Override CAMUNDA_JDBC_URL for a dedicated DB/PDB; otherwise share host with own schema user.
+    url: ${CAMUNDA_JDBC_URL:${ORACLE_JDBC_URL:jdbc:oracle:thin:@//localhost:1521/FREEPDB1}}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${CAMUNDA_DB_USER:CAMUNDA_SERVICE}
+    password: ${CAMUNDA_DB_PASSWORD:Camunda_Pass_1}
+  jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+app:
+  services:
+    refund-base-url: http://localhost:8082
+    taxpayer-base-url: http://localhost:8083
+
+camunda.bpm:
+  database:
+    type: oracle
+    schema-update: true
+  admin-user:
+    id: demo
+    password: demo
+    firstName: Demo
+  filter:
+    create: All tasks
+  generic-properties:
+    properties:
+      historyTimeToLive: 30
