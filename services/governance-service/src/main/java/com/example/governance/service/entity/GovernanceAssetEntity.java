@@ -1,6 +1,6 @@
 package com.example.governance.service.entity;
 
-import com.example.governance.annotations.GovernedAsset;
+import com.example.governance.annotations.Domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -13,9 +13,8 @@ import lombok.Data;
 import org.hibernate.annotations.Comment;
 
 /**
- * Identity catalog row: which service/entity maps to which governed asset id.
- * Authoritative owner/steward/classification/retention live in OpenMetadata;
- * mirrored columns are a last-known projection for browsing when OM is unreachable.
+ * Catalog row for entities/fields synced from domain services.
+ * Domain comes from {@code @Domain}; optional {@code assetId} may link to OpenMetadata.
  */
 @Data
 @Entity
@@ -26,8 +25,8 @@ import org.hibernate.annotations.Comment;
                 columnNames = {"service_name", "entity_name", "field_name"}
         )
 )
-@GovernedAsset("governance.asset")
-@Comment("Catalog of governed asset identities synced from domain services")
+@Domain("governance")
+@Comment("Catalog of entity/field metadata synced from domain services")
 public class GovernanceAssetEntity {
 
     @Id
@@ -64,9 +63,9 @@ public class GovernanceAssetEntity {
     @Comment("Physical database column name for FIELD rows")
     private String columnName;
 
-    /** Logical asset id from {@code @GovernedAsset}, e.g. {@code refunds.application}. */
+    /** Optional OpenMetadata glossary term id when linked, e.g. {@code refunds.application}. */
     @Column(name = "asset_id", length = 255)
-    @Comment("Logical governed asset id from @GovernedAsset")
+    @Comment("Optional OpenMetadata asset id when linked")
     private String assetId;
 
     /** Mirrored from OpenMetadata (last-known). */
@@ -83,7 +82,7 @@ public class GovernanceAssetEntity {
     private String steward;
 
     @Column(length = 120)
-    @Comment("Data domain derived from asset id or naming policy")
+    @Comment("Data domain from @Domain / naming policy")
     private String domain;
 
     @Column(name = "retention_policy", length = 120)

@@ -84,12 +84,7 @@ public class GovernanceCatalogService {
                 entity.setTableName(dto.getTableName());
                 entity.setColumnName(dto.getColumnName());
                 entity.setAssetId(blankToNull(dto.getAssetId()));
-                // Domain from asset id when present; otherwise accept synced domain for naming
-                String domain = blankToNull(dto.getDomain());
-                if (domain == null && entity.getAssetId() != null) {
-                    domain = OpenMetadataClient.domainFromAssetId(entity.getAssetId());
-                }
-                entity.setDomain(domain);
+                entity.setDomain(blankToNull(dto.getDomain()));
                 entity.setDescription(blankToNull(dto.getDescription()));
                 // Do not overwrite mirrored OM attributes from annotation sync (identity only)
                 if (dto.getMetadataVersion() != null) {
@@ -305,8 +300,8 @@ public class GovernanceCatalogService {
     }
 
     /**
-     * App-level: {@code @GovernedAsset} identity + naming conventions.
-     * Registry-level: owner/steward/classification/retention present in OpenMetadata.
+     * App-level: {@code @Domain} + naming conventions.
+     * Optional registry checks when an {@code assetId} is present and OM is enabled.
      */
     @Transactional(readOnly = true)
     public ConformanceReport conformance(String serviceName) {
@@ -327,16 +322,8 @@ public class GovernanceCatalogService {
         for (GovernanceAssetEntity asset : assets) {
             if (isEntityLevel(asset)) {
                 issues.addAll(entityIdentityIssues(asset));
-                String domain = asset.getDomain();
-                if (isBlank(domain) && !isBlank(asset.getAssetId())) {
-                    domain = OpenMetadataClient.domainFromAssetId(asset.getAssetId());
-                }
-                if (!isBlank(domain) && namingProperties.isEnforce()) {
-                    // temporary domain for naming check
-                    String previous = asset.getDomain();
-                    asset.setDomain(domain);
+                if (!isBlank(asset.getDomain()) && namingProperties.isEnforce()) {
                     issues.addAll(namingIssues(service, asset));
-                    asset.setDomain(previous);
                 }
                 if (openMetadataProperties.isEnabled() && openMetadataProperties.isRequireRegistryAttributes()
                         && !isBlank(asset.getAssetId())) {
@@ -348,15 +335,12 @@ public class GovernanceCatalogService {
             if (!isBlank(asset.getClassification())) {
                 GovernanceAssetEntity parent = entitiesByName.get(asset.getEntityName());
                 String domain = firstNonBlank(asset.getDomain(), parent == null ? null : parent.getDomain());
-                if (isBlank(domain) && parent != null && !isBlank(parent.getAssetId())) {
-                    domain = OpenMetadataClient.domainFromAssetId(parent.getAssetId());
-                }
                 if (isBlank(domain)) {
                     issues.add(new ConformanceIssue(
                             asset.getEntityName(),
                             asset.getFieldName(),
                             "DOMAIN_REQUIRED_FOR_CLASSIFIED_FIELD",
-                            "Classified field has no domain on field or parent entity asset id"
+                            "Classified field has no domain on field or parent entity @Domain"
                     ));
                 }
             }
@@ -366,12 +350,12 @@ public class GovernanceCatalogService {
 
     private List<ConformanceIssue> entityIdentityIssues(GovernanceAssetEntity asset) {
         List<ConformanceIssue> issues = new ArrayList<>();
-        if (isBlank(asset.getAssetId())) {
+        if (isBlank(asset.getDomain())) {
             issues.add(new ConformanceIssue(
                     asset.getEntityName(),
                     "",
-                    "GOVERNED_ASSET_REQUIRED",
-                    "Entity is missing @GovernedAsset asset id"
+                    "DOMAIN_REQUIRED",
+                    "Entity is missing @Domain"
             ));
         }
         return issues;
@@ -385,7 +369,7 @@ public class GovernanceCatalogService {
                     asset.getEntityName(),
                     "",
                     "REGISTRY_ASSET_MISSING",
-                    "Governed asset '" + asset.getAssetId() + "' is not registered in OpenMetadata"
+                    "OpenMetadata asset '" + asset.getAssetId() + "' is not registered"
             ));
             return issues;
         }

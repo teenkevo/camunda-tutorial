@@ -7,8 +7,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * @deprecated Prefer {@link GovernedAsset} for asset identity. Mutable attributes
- *     (owner, steward, classification, retention) belong in OpenMetadata, not code.
+ * @deprecated Prefer {@link Domain} for naming/domain. Mutable attributes
+ *     (owner, steward, classification, retention) belong in OpenMetadata when used, not code.
  */
 @Deprecated(since = "hybrid-governance", forRemoval = false)
 @Documented

@@ -6,7 +6,7 @@
 camunda-tutorial/
 ├── db/oracle/                    # schema bootstrap SQL for Oracle 26ai
 ├── libs/
-│   ├── governance-annotations/   # @GovernedAsset, @Sensitive, …
+│   ├── governance-annotations/   # @Domain, @Sensitive, …
 │   ├── governance-runtime/       # scan/publish, local metadata cache, refresh
 │   └── camunda-client/
 ├── docker-compose.yml            # Oracle
@@ -40,28 +40,24 @@ docker compose up -d oracle
 # first boot runs db/oracle/init/01-create-schemas.sh (createAppUser in FREEPDB1)
 ```
 
-## Hybrid governance (identity in code, attributes in OpenMetadata)
+## Governance (domain + naming in code)
 
-Governance attributes (owner, steward, classification, retention) change independently of application releases. The hybrid model:
-
-1. **Code** declares asset identity only: `@GovernedAsset("refunds.application")`.
-2. **Domain** for naming is derived from the asset id prefix (`refunds`).
-3. **OpenMetadata** stores mutable attributes (create glossary terms / tags in the OM UI as needed).
-4. **governance-service** is the facade: syncs identity, resolves metadata from OM, runs conformance.
-5. **Domain services** cache resolved metadata and refresh via webhook / poll — **no restart** when ownership changes.
+1. **Code** declares domain for naming: `@Domain("refunds")`.
+2. **governance-service** syncs scanned entities/fields and runs naming conformance.
+3. **OpenMetadata** remains available for optional registry attributes when an `assetId` is linked later.
 
 Startup does **not** auto-seed OpenMetadata glossary terms (`app.governance.openmetadata.seed=false`). Set `seed: true` only if you want the demo seed runner.
 
 ```java
 @Entity
 @Table(name = "RFND_APPL")
-@GovernedAsset("refunds.application")
+@Domain("refunds")
 public class RefundApplicationEntity { … }
 ```
 
-| Lives in code | Lives in OpenMetadata |
+| Lives in code | Optional OpenMetadata |
 |---------------|------------------------|
-| `@GovernedAsset` id | owner, steward |
+| `@Domain` (naming allow-list) | owner, steward |
 | `@Table` name (naming check) | classification, retention |
 | `@Sensitive` / `@Comment` | versioned updates |
 | Bean Validation on `@Valid` request DTOs | (catalog only; OM test-case hook later) |
@@ -133,5 +129,5 @@ Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am
 - **Naming policy** (`/api/governance/naming-domains`): allow-listed domains + table prefixes (`REG_`, `RFND_`, …) — still enforced in the application / governance-service.
 - **Oracle `COMMENT ON`**: only `@Comment` text (applied on domain-service startup).
 
-Missing `@GovernedAsset`, unknown domains, bad table names, or missing OpenMetadata attributes fail  
+Missing `@Domain`, unknown domains, or bad table names fail  
 `GET /api/governance/conformance?service=…`.

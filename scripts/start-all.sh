@@ -47,11 +47,18 @@ else
   exit 1
 fi
 
-SERVICES=(
-  "camunda-service"
+# Domain services publish catalog metadata on startup — start governance first.
+BOOTSTRAP_SERVICES=(
   "governance-service"
+)
+DOMAIN_SERVICES=(
+  "camunda-service"
   "refund-service"
   "taxpayer-service"
+)
+SERVICES=(
+  "${BOOTSTRAP_SERVICES[@]}"
+  "${DOMAIN_SERVICES[@]}"
 )
 
 # Wait until Spring has logged startup AND the URL accepts a TCP/HTTP connection.
@@ -270,18 +277,17 @@ info "Building modules..."
 "$MVN" -q -DskipTests package
 ok "Maven package complete"
 
-info "Starting services..."
-for svc in "${SERVICES[@]}"; do
-  pid_file="${PID_DIR}/${svc}.pid"
-  log_file="${LOG_DIR}/${svc}.log"
+start_service() {
+  local svc="$1"
+  local pid_file="${PID_DIR}/${svc}.pid"
+  local log_file="${LOG_DIR}/${svc}.log"
 
   if [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
     ok "${svc} already running (pid $(cat "$pid_file"))"
-    continue
+    return 0
   fi
 
   rm -f "$pid_file"
-
   # Truncate log so "Started ..." detection refers to this run
   : >"$log_file"
 
@@ -289,13 +295,24 @@ for svc in "${SERVICES[@]}"; do
     >"$log_file" 2>&1 &
   echo $! >"$pid_file"
   step "${svc} starting (pid $(cat "$pid_file"), log ${log_file})"
+}
+
+info "Starting governance-service first (catalog must be up before domain sync)..."
+for svc in "${BOOTSTRAP_SERVICES[@]}"; do
+  start_service "$svc"
+done
+wait_service "governance-service" "${GOVERNANCE_URL}/api/governance/naming-domains"
+
+info "Starting domain services..."
+for svc in "${DOMAIN_SERVICES[@]}"; do
+  start_service "$svc"
 done
 
-info "Waiting for services (Maven boot can take a few minutes)..."
-wait_service "governance-service" "${GOVERNANCE_URL}/api/governance/naming-domains"
+info "Waiting for domain services (Maven boot can take a few minutes)..."
 wait_service "refund-service" "http://localhost:8082/api/refund-applications"
 wait_service "taxpayer-service" "http://localhost:8083/api/taxpayer-registrations"
-# Catalog publish happens on domain-service ApplicationRunner after start.
+# Catalog publish happens on domain-service ApplicationRunner after start;
+# publisher now retries if governance was briefly unreachable.
 sleep 3
 
 CONFORM_FAILED=0

@@ -4,32 +4,26 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="adb3e0ca-16fe-4fad-88a9-af24f6e62345" name="Changes" comment="Refactor down">
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+    <list default="true" id="adb3e0ca-16fe-4fad-88a9-af24f6e62345" name="Changes" comment="Updates">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-annotations/src/main/java/com/example/governance/annotations/DataDomain.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-annotations/src/main/java/com/example/governance/annotations/DataDomain.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-annotations/src/main/java/com/example/governance/annotations/DataGovernance.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-annotations/src/main/java/com/example/governance/annotations/DataGovernance.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-annotations/src/main/java/com/example/governance/annotations/GovernedAsset.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceAssetDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceAssetDto.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataPublisher.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataPublisher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceSyncRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceSyncRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataScanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataWarmup.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/governance-runtime/src/test/java/com/example/governance/runtime/catalog/SampleCommentedEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/libs/governance-runtime/src/test/java/com/example/governance/runtime/catalog/SampleCommentedEntity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/start-all.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/start-all.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/governance-service/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/controller/GovernanceCatalogController.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/controller/GovernanceCatalogController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/dto/GovernanceSyncRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/dto/GovernanceSyncRequest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceAssetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceAssetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceValidationEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceValidationEntity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/service/GovernanceCatalogService.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/service/GovernanceCatalogService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/resources/application.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/entity/TaxpayerRegistrationEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/entity/TaxpayerRegistrationEntity.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,61 +56,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.6002911067800425" />
-      <entry key="MS500" value="5.45518615997744" />
-      <entry key="S2" value="13.769416846588449" />
-      <entry key="S5" value="27.956108070020004" />
-      <entry key="S10" value="48.122698314680775" />
-      <entry key="S30" value="86.94022133350151" />
-      <entry key="S60" value="104.94750571893552" />
-      <entry key="M2" value="116.08637303295282" />
-      <entry key="M5" value="123.62635708683999" />
-      <entry key="M10" value="127.10688739542161" />
-      <entry key="M15" value="129.99005889232487" />
-      <entry key="M30" value="140.38635504638714" />
-      <entry key="H1" value="180.86105053793878" />
-      <entry key="H2" value="323.80359743478175" />
-      <entry key="H4" value="651.605370694045" />
-      <entry key="D1" value="3667.4778425991317" />
-      <entry key="W1" value="10435.319547771838" />
+      <entry key="MS100" value="1.000000000004968" />
+      <entry key="MS500" value="1.0253750146223224" />
+      <entry key="S2" value="4.548029548801984" />
+      <entry key="S5" value="16.32318300660303" />
+      <entry key="S10" value="29.20774682980888" />
+      <entry key="S30" value="46.68640933862287" />
+      <entry key="S60" value="55.9858356969913" />
+      <entry key="M2" value="74.28603038704377" />
+      <entry key="M5" value="135.99945272848217" />
+      <entry key="M10" value="226.07410093240264" />
+      <entry key="M15" value="294.7652967276833" />
+      <entry key="M30" value="415.7821878564595" />
+      <entry key="H1" value="512.4610164901742" />
+      <entry key="H2" value="575.583044912449" />
+      <entry key="H4" value="638.6458261204947" />
+      <entry key="D1" value="2814.6123454581225" />
+      <entry key="W1" value="10382.028683841612" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
-      <entry key="S10" value="3.4819160069357624E-172" />
-      <entry key="S30" value="9.599104617448133E-58" />
-      <entry key="S60" value="4.2696622310919897E-29" />
-      <entry key="M2" value="9.178451453460518E-15" />
-      <entry key="M5" value="3.6729154173511247E-6" />
-      <entry key="M10" value="0.002711484036780301" />
-      <entry key="M15" value="0.024730400211631944" />
-      <entry key="M30" value="0.25255736567540954" />
-      <entry key="H1" value="1.0189155746356156" />
-      <entry key="H2" value="2.342857216253263" />
-      <entry key="H4" value="3.7000383976648155" />
-      <entry key="D1" value="5.55484685289223" />
-      <entry key="W1" value="8.283331746133143" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="1.5942431270898888E-186" />
+      <entry key="M5" value="7.259805449151323E-75" />
+      <entry key="M10" value="1.2054912977204947E-37" />
+      <entry key="M15" value="3.103624439220446E-25" />
+      <entry key="M30" value="8.947033185049403E-13" />
+      <entry key="H1" value="1.917775231456116E-6" />
+      <entry key="H2" value="0.0032142198138281866" />
+      <entry key="H4" value="0.13704749671207495" />
+      <entry key="D1" value="3.207127575572012" />
+      <entry key="W1" value="7.658181366814704" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.5703719437070576" />
-      <entry key="MS500" value="5.434944145760705" />
-      <entry key="S2" value="13.756902675756786" />
-      <entry key="S5" value="27.946284169601093" />
-      <entry key="S10" value="48.11430903305612" />
-      <entry key="S30" value="86.93512383227824" />
-      <entry key="S60" value="104.94441365685954" />
-      <entry key="M2" value="116.08465792956804" />
-      <entry key="M5" value="123.62562864565797" />
-      <entry key="M10" value="127.10921143158684" />
-      <entry key="M15" value="130.01447479154237" />
-      <entry key="M30" value="140.63847582265595" />
-      <entry key="H1" value="181.87917736792443" />
-      <entry key="H2" value="326.14538315021736" />
-      <entry key="H4" value="655.3043610266424" />
-      <entry key="D1" value="3673.0317768812592" />
-      <entry key="W1" value="10443.602550044512" />
+      <entry key="MS100" value="0.9726549474171862" />
+      <entry key="MS500" value="1.0197553994828266" />
+      <entry key="S2" value="4.543218056063267" />
+      <entry key="S5" value="16.31640406541172" />
+      <entry key="S10" value="29.201636030837868" />
+      <entry key="S30" value="46.68305211019149" />
+      <entry key="S60" value="55.98376117500267" />
+      <entry key="M2" value="74.28464069565283" />
+      <entry key="M5" value="135.99831751516976" />
+      <entry key="M10" value="226.07288505376803" />
+      <entry key="M15" value="294.76411434872034" />
+      <entry key="M30" value="415.781266846334" />
+      <entry key="H1" value="512.4604295642254" />
+      <entry key="H2" value="575.5859226698979" />
+      <entry key="H4" value="638.7826549411277" />
+      <entry key="D1" value="2817.8189121945543" />
+      <entry key="W1" value="10389.686555500673" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -140,7 +134,6 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "SHELLCHECK.PATH": "/Users/administrator/Library/Application Support/JetBrains/IntelliJIdea2026.2/plugins/Shell Script/shellcheck",
     "Spring Boot.CamundaTutorialApplication.executor": "Run",
     "Spring Boot.GovernanceServiceApplication.executor": "Run",
@@ -270,7 +263,8 @@
     <MESSAGE value="Implemented OM" />
     <MESSAGE value="Implemented OM improvements" />
     <MESSAGE value="Refactor down" />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor down" />
+    <MESSAGE value="Updates" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updates" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

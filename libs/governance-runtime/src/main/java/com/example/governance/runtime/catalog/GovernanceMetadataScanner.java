@@ -3,7 +3,7 @@ package com.example.governance.runtime.catalog;
 import com.example.governance.annotations.DataDomain;
 import com.example.governance.annotations.DataGovernance;
 import com.example.governance.annotations.DataOwner;
-import com.example.governance.annotations.GovernedAsset;
+import com.example.governance.annotations.Domain;
 import com.example.governance.annotations.Sensitive;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,9 +19,8 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Component;
 
 /**
- * Scans JPA {@link Entity} classes for governance identity ({@link GovernedAsset})
- * and structural field annotations. Mutable attributes (owner, steward, …) are
- * resolved from the external registry, not from annotations.
+ * Scans JPA {@link Entity} classes for domain identity ({@link Domain})
+ * and structural field annotations used by the governance catalog.
  */
 @Component
 public class GovernanceMetadataScanner {
@@ -45,22 +44,12 @@ public class GovernanceMetadataScanner {
         return assets;
     }
 
-    /** Asset ids declared via {@link GovernedAsset} on scanned entities. */
-    public List<String> scanAssetIds(Set<String> basePackages) {
-        return scan("local", basePackages).stream()
-                .filter(a -> "ENTITY".equals(a.getAssetType()))
-                .map(GovernanceAssetDto::getAssetId)
-                .filter(id -> id != null && !id.isBlank())
-                .distinct()
-                .toList();
-    }
-
     private List<GovernanceAssetDto> describeEntity(String serviceName, Class<?> type) {
         List<GovernanceAssetDto> assets = new ArrayList<>();
         Table table = type.getAnnotation(Table.class);
         String tableName = table != null && !table.name().isBlank() ? table.name() : type.getSimpleName();
 
-        GovernedAsset governed = type.getAnnotation(GovernedAsset.class);
+        Domain domainAnn = type.getAnnotation(Domain.class);
         DataGovernance legacy = type.getAnnotation(DataGovernance.class);
         Comment typeComment = type.getAnnotation(Comment.class);
 
@@ -71,10 +60,8 @@ public class GovernanceMetadataScanner {
         entityAsset.setFieldName("");
         entityAsset.setTableName(tableName);
 
-        if (governed != null && !governed.value().isBlank()) {
-            String assetId = governed.value().trim();
-            entityAsset.setAssetId(assetId);
-            entityAsset.setDomain(domainFromAssetId(assetId));
+        if (domainAnn != null && !domainAnn.value().isBlank()) {
+            entityAsset.setDomain(domainAnn.value().trim());
         } else if (legacy != null) {
             // Temporary bridge while migrating off @DataGovernance
             entityAsset.setDomain(legacy.domain());
@@ -82,9 +69,6 @@ public class GovernanceMetadataScanner {
             entityAsset.setSteward(legacy.steward());
             entityAsset.setClassification(legacy.classification().name());
             entityAsset.setRetentionPolicy(legacy.retentionPolicy());
-            if (legacy.domain() != null && !legacy.domain().isBlank()) {
-                entityAsset.setAssetId(legacy.domain() + "." + type.getSimpleName());
-            }
         }
 
         if (typeComment != null && !typeComment.value().isBlank()) {
@@ -114,7 +98,6 @@ public class GovernanceMetadataScanner {
                 fieldAsset.setFieldName(field.getName());
                 fieldAsset.setTableName(tableName);
                 fieldAsset.setColumnName(columnName);
-                fieldAsset.setAssetId(entityAsset.getAssetId());
                 fieldAsset.setDomain(entityAsset.getDomain());
                 if (sensitive != null) {
                     fieldAsset.setClassification(sensitive.value().name());
@@ -135,7 +118,7 @@ public class GovernanceMetadataScanner {
         return assets;
     }
 
-    /** {@code refunds.application} → {@code refunds}. */
+    /** {@code refunds.application} → {@code refunds} (OpenMetadata asset id helper). */
     public static String domainFromAssetId(String assetId) {
         if (assetId == null || assetId.isBlank()) {
             return null;

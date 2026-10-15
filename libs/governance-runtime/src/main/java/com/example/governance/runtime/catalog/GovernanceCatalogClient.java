@@ -63,14 +63,41 @@ public class GovernanceCatalogClient {
     }
 
     public void syncSafe(GovernanceSyncRequest request) {
-        try {
-            sync(request);
-        } catch (RestClientException ex) {
-            if (properties.isFailOnError()) {
-                throw ex;
+        int maxAttempts = Math.max(1, properties.getSyncMaxAttempts());
+        long delayMs = Math.max(100L, properties.getSyncRetryDelayMs());
+        RestClientException last = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                sync(request);
+                return;
+            } catch (RestClientException ex) {
+                last = ex;
+                if (attempt == maxAttempts) {
+                    break;
+                }
+                log.warn(
+                        "Governance catalog sync attempt {}/{} failed (retrying in {}ms): {}",
+                        attempt,
+                        maxAttempts,
+                        delayMs,
+                        ex.getMessage()
+                );
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
-            log.warn("Governance catalog sync failed (continuing): {}", ex.getMessage());
         }
+        if (properties.isFailOnError() && last != null) {
+            throw last;
+        }
+        log.warn(
+                "Governance catalog sync failed after {} attempt(s) (continuing): {}",
+                maxAttempts,
+                last == null ? "unknown" : last.getMessage()
+        );
     }
 
     private static String trimSlash(String baseUrl) {

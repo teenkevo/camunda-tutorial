@@ -1,6 +1,6 @@
 package com.example.taxpayer.entity;
 
-import com.example.governance.annotations.GovernedAsset;
+import com.example.governance.annotations.Domain;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
@@ -17,7 +17,7 @@ import org.hibernate.annotations.Comment;
 @Data
 @Entity
 @Table(name = "REG_TAX_PAYER_MST")
-@GovernedAsset("taxpayer-registration.taxpayer")
+@Domain("taxpayer-registration")
 @Comment("Taxpayer registration business record")
 public class TaxpayerRegistrationEntity {
 

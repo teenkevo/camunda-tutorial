@@ -1,6 +1,6 @@
 package com.example.governance.service.entity;
 
-import com.example.governance.annotations.GovernedAsset;
+import com.example.governance.annotations.Domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -26,7 +26,7 @@ import org.hibernate.annotations.Comment;
                 columnNames = {"validation_id"}
         )
 )
-@GovernedAsset("governance.validation")
+@Domain("governance")
 @Comment("Catalog of Bean Validation constraints sniffed from @Valid request DTOs")
 public class GovernanceValidationEntity {
 

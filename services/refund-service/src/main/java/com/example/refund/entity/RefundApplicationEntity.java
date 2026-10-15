@@ -1,6 +1,6 @@
 package com.example.refund.entity;
 
-import com.example.governance.annotations.GovernedAsset;
+import com.example.governance.annotations.Domain;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
@@ -21,7 +21,7 @@ import org.hibernate.annotations.Comment;
 @Data
 @Entity
 @Table(name = "RFND_APPL")
-@GovernedAsset("refunds.application")
+@Domain("refunds")
 @Comment("Refund application business record")
 public class RefundApplicationEntity {
 

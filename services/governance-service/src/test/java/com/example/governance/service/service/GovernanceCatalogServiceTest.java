@@ -63,7 +63,7 @@ class GovernanceCatalogServiceTest {
     }
 
     @Test
-    void syncAndConformance_requiresGovernedAssetAndRegistry() {
+    void syncAndConformance_requiresDomainAndNaming() {
         GovernanceAssetDto entity = validRefundEntity();
         entity.setDescription("Refund application business record");
 
@@ -74,7 +74,6 @@ class GovernanceCatalogServiceTest {
         field.setTableName("RFND_APPL");
         field.setColumnName("first_name");
         field.setClassification("PII");
-        field.setAssetId("refunds.application");
         field.setDomain("refunds");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity, field)));
@@ -84,29 +83,29 @@ class GovernanceCatalogServiceTest {
 
         List<GovernanceTableMetadataDto> tables = catalogService.listTables("refund-service");
         assertThat(tables).hasSize(1);
-        assertThat(tables.get(0).getAssetId()).isEqualTo("refunds.application");
-        assertThat(tables.get(0).getSteward()).isEqualTo("Refund Data Management");
+        assertThat(tables.get(0).getDomain()).isEqualTo("refunds");
         assertThat(tables.get(0).getColumns()).hasSize(1);
     }
 
     @Test
-    void conformance_failsWhenGovernedAssetMissing() {
+    void conformance_failsWhenDomainMissing() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setAssetId(null);
-        entity.setDomain("refunds");
+        entity.setDomain(null);
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
-        assertThat(report.issues()).anyMatch(i -> "GOVERNED_ASSET_REQUIRED".equals(i.rule()));
+        assertThat(report.issues()).anyMatch(i -> "DOMAIN_REQUIRED".equals(i.rule()));
     }
 
     @Test
-    void conformance_failsWhenRegistryAssetMissing() {
+    void conformance_checksRegistryWhenAssetIdPresent() {
         when(openMetadataClient.fetchAsset("refunds.application")).thenReturn(Optional.empty());
 
-        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(validRefundEntity())));
+        GovernanceAssetDto entity = validRefundEntity();
+        entity.setAssetId("refunds.application");
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
@@ -121,7 +120,9 @@ class GovernanceCatalogServiceTest {
                 )
         ));
 
-        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(validRefundEntity())));
+        GovernanceAssetDto entity = validRefundEntity();
+        entity.setAssetId("refunds.application");
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
@@ -131,14 +132,7 @@ class GovernanceCatalogServiceTest {
     @Test
     void conformance_failsWhenDomainNotAllowed() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setAssetId("unknown-domain.thing");
-        entity.setDomain(null);
-
-        when(openMetadataClient.fetchAsset("unknown-domain.thing")).thenReturn(Optional.of(
-                new GovernanceMetadataDto(
-                        "unknown-domain.thing", 1L, "x", "y", "unknown-domain", "PII", "R", null
-                )
-        ));
+        entity.setDomain("unknown-domain");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
@@ -203,7 +197,6 @@ class GovernanceCatalogServiceTest {
         entity.setEntityName("com.example.refund.entity.RefundApplicationEntity");
         entity.setFieldName("");
         entity.setTableName("RFND_APPL");
-        entity.setAssetId("refunds.application");
         entity.setDomain("refunds");
         return entity;
     }
