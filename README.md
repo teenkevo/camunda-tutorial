@@ -110,7 +110,7 @@ so attribute changes fan out to service caches. Services also poll every 60s as 
 ./scripts/demo/reset-openmetadata.sh --yes   # wipe OM catalog, keep Oracle
 ```
 
-Logs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am spring-boot:run` per terminal.
+Or run mains in IntelliJ / one `mvn -pl services/<name> -am spring-boot:run` per terminal.
 
 ## URLs
 

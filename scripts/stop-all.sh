@@ -3,7 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-LOG_DIR="${ROOT}/.logs"
+RUN_DIR="${TMPDIR:-/tmp}/camunda-tutorial"
+LOG_DIR="${RUN_DIR}"
 
 SERVICES=(
   "camunda-service"

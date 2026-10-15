@@ -6,9 +6,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-LOG_DIR="${ROOT}/.logs"
-PID_DIR="${LOG_DIR}"
-mkdir -p "$LOG_DIR"
+# Ephemeral run state (pids/logs) — not kept in the repo; can be rewired later.
+RUN_DIR="${TMPDIR:-/tmp}/camunda-tutorial"
+LOG_DIR="${RUN_DIR}"
+PID_DIR="${RUN_DIR}"
+mkdir -p "$RUN_DIR"
 
 GOVERNANCE_URL="${GOVERNANCE_URL:-http://localhost:8081}"
 
@@ -335,8 +337,7 @@ step "OM webhook     ${GOVERNANCE_URL}/api/governance/webhooks/openmetadata"
 step "Refunds        http://localhost:8082/api/refund-applications"
 step "Taxpayer       http://localhost:8083/api/taxpayer-registrations"
 echo
-dim "Validation sniffing: domain services scan @Valid request DTOs at startup and sync"
-dim "  ids like refund-service.RefundApplicationRequest.firstName.NotBlank"
+
 dim "Logs:  ${LOG_DIR}/"
 dim "Stop:  scripts/stop-all.sh [--with-db]"
 
