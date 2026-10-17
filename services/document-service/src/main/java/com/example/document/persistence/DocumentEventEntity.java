@@ -2,8 +2,11 @@ package com.example.document.persistence;
 
 import com.example.governance.annotations.Domain;
 import com.example.governance.runtime.SensitivitySupport;
+import com.example.governance.runtime.audit.Audited;
+import com.example.governance.runtime.audit.AuditTrailListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -14,15 +17,20 @@ import org.hibernate.annotations.Comment;
 
 @Data
 @Entity
+@EntityListeners(AuditTrailListener.class)
 @Table(name = "DOCUMENT_EVENT")
 @Domain("documents")
 @Comment("Lifecycle and audit event for a document")
-public class DocumentEventEntity {
+public class DocumentEventEntity implements Audited {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Comment("Surrogate primary key")
     private Long id;
+
+    @Column(name = "DOCUMENT_EVENT_AUD", unique = true, length = 36)
+    @Comment("Audit id for this event row. Look up DOCUMENT_AUDIT.AUDIT_ID for its history")
+    private String auditId;
 
     @Column(nullable = false)
     @Comment("Document id this event belongs to")

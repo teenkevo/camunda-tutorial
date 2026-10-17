@@ -18,4 +18,5 @@ public class DocumentResponse {
     private Instant createdAt;
     private Instant updatedAt;
     private Long versionNo;
+    private String documentAud;
 }

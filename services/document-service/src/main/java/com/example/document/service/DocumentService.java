@@ -109,6 +109,7 @@ public class DocumentService {
             response.setToStatus(event.getToStatus());
             response.setMessage(event.getMessage());
             response.setCreatedAt(event.getCreatedAt());
+            response.setDocumentEventAud(event.getAuditId());
             return response;
         }).toList();
     }
@@ -217,6 +218,7 @@ public class DocumentService {
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedAt(entity.getUpdatedAt());
         response.setVersionNo(entity.getVersionNo());
+        response.setDocumentAud(entity.getAuditId());
         return response;
     }
 }

@@ -4,11 +4,14 @@ import com.example.governance.annotations.Domain;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
+import com.example.governance.runtime.audit.Audited;
+import com.example.governance.runtime.audit.AuditTrailListener;
 import com.example.registration.shared.domain.IdentifierType;
 import com.example.registration.shared.domain.LifecycleState;
 import com.example.registration.shared.domain.TaxpayerType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -22,6 +25,7 @@ import org.hibernate.annotations.Comment;
 
 @Data
 @Entity
+@EntityListeners(AuditTrailListener.class)
 @Table(
         name = "REGISTRATION_TAXPAYER",
         uniqueConstraints = @UniqueConstraint(
@@ -31,12 +35,16 @@ import org.hibernate.annotations.Comment;
 )
 @Domain("taxpayer-registration")
 @Comment("Registered taxpayer master record")
-public class TaxpayerEntity {
+public class TaxpayerEntity implements Audited {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Comment("Surrogate primary key")
     private Long id;
+
+    @Column(name = "TAXPAYER_AUD", unique = true, length = 36)
+    @Comment("Audit id for this taxpayer. Look up REGISTRATION_AUDIT.AUDIT_ID for its history")
+    private String auditId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "taxpayer_type", nullable = false, length = 24)

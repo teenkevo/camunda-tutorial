@@ -218,6 +218,9 @@ public class RefundApplicationService {
         response.setDecision(text(payload, "decision"));
         response.setCreatedAt(instant(document.get("createdAt")));
         response.setUpdatedAt(instant(document.get("updatedAt")));
+        refundApplicationRepository.findByDrn(response.getDrn())
+                .map(RefundApplicationEntity::getAuditId)
+                .ifPresent(response::setRefundApplicationAud);
         return response;
     }
 

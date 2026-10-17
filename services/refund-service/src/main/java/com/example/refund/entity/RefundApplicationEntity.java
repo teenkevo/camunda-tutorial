@@ -4,10 +4,13 @@ import com.example.governance.annotations.Domain;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
+import com.example.governance.runtime.audit.Audited;
+import com.example.governance.runtime.audit.AuditTrailListener;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,6 +25,7 @@ import org.hibernate.annotations.Comment;
 
 @Data
 @Entity
+@EntityListeners(AuditTrailListener.class)
 @Table(
         name = "REFUND_APPLICATION",
         uniqueConstraints = @UniqueConstraint(
@@ -31,12 +35,16 @@ import org.hibernate.annotations.Comment;
 )
 @Domain("refunds")
 @Comment("Refund application business record, keyed by the document DRN")
-public class RefundApplicationEntity {
+public class RefundApplicationEntity implements Audited {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Comment("Surrogate primary key")
     private Long id;
+
+    @Column(name = "REFUND_APPLICATION_AUD", unique = true, length = 36)
+    @Comment("Audit id for this refund application. Look up REFUND_AUDIT.AUDIT_ID for its history")
+    private String auditId;
 
     @Column(nullable = false, length = 64)
     @Comment("Document reference number created for this refund")

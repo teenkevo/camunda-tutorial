@@ -2,8 +2,11 @@ package com.example.document.persistence;
 
 import com.example.governance.annotations.Domain;
 import com.example.governance.runtime.SensitivitySupport;
+import com.example.governance.runtime.audit.Audited;
+import com.example.governance.runtime.audit.AuditTrailListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -17,15 +20,20 @@ import org.hibernate.type.SqlTypes;
 
 @Data
 @Entity
+@EntityListeners(AuditTrailListener.class)
 @Table(name = "DOCUMENT_RECORD")
 @Domain("documents")
 @Comment("Application document with a DRN and a JSON payload")
-public class DocumentEntity {
+public class DocumentEntity implements Audited {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Comment("Surrogate primary key")
     private Long id;
+
+    @Column(name = "DOCUMENT_AUD", unique = true, length = 36)
+    @Comment("Audit id for this document. Look up DOCUMENT_AUDIT.AUDIT_ID for its history")
+    private String auditId;
 
     @Column(nullable = false, unique = true, length = 64)
     @Comment("Document reference number used by every process step")

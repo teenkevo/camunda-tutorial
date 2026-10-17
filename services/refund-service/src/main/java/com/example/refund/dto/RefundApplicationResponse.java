@@ -36,6 +36,7 @@ public class RefundApplicationResponse {
     private String decision;
     private Instant createdAt;
     private Instant updatedAt;
+    private String refundApplicationAud;
 
     @Override
     public String toString() {

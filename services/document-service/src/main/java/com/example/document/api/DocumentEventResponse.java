@@ -13,4 +13,5 @@ public class DocumentEventResponse {
     private String toStatus;
     private String message;
     private Instant createdAt;
+    private String documentEventAud;
 }
