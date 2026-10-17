@@ -19,15 +19,18 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class AuditBackfill {
 
     private final ObjectProvider<AuditSink> sinks;
+    private final ObjectProvider<AuditLookup> lookups;
     private final EntityManager entityManager;
     private final TransactionTemplate transactions;
 
     public AuditBackfill(
             ObjectProvider<AuditSink> sinks,
+            ObjectProvider<AuditLookup> lookups,
             EntityManager entityManager,
             PlatformTransactionManager transactionManager
     ) {
         this.sinks = sinks;
+        this.lookups = lookups;
         this.entityManager = entityManager;
         this.transactions = new TransactionTemplate(transactionManager);
     }
@@ -37,20 +40,45 @@ public class AuditBackfill {
         if (sinks.getIfAvailable() == null) {
             return;
         }
-        transactions.executeWithoutResult(status -> AuditTrailSupport.withAction("BASELINE", () -> {
-            for (EntityType<?> type : entityManager.getMetamodel().getEntities()) {
-                Class<?> javaType = type.getJavaType();
-                if (!Audited.class.isAssignableFrom(javaType)) {
-                    continue;
+        transactions.executeWithoutResult(status -> {
+            AuditTrailSupport.withAction("BASELINE", () -> {
+                for (EntityType<?> type : entityManager.getMetamodel().getEntities()) {
+                    Class<?> javaType = type.getJavaType();
+                    if (!Audited.class.isAssignableFrom(javaType)) {
+                        continue;
+                    }
+                    List<?> rows = entityManager
+                            .createQuery("select e from " + type.getName() + " e where e.auditId is null", javaType)
+                            .getResultList();
+                    for (Object row : rows) {
+                        ((Audited) row).setAuditId(UUID.randomUUID().toString());
+                    }
                 }
-                List<?> rows = entityManager
-                        .createQuery("select e from " + type.getName() + " e where e.auditId is null", javaType)
-                        .getResultList();
-                for (Object row : rows) {
-                    ((Audited) row).setAuditId(UUID.randomUUID().toString());
+                entityManager.flush();
+            });
+            recordCurrentSnapshots();
+        });
+    }
+
+    private void recordCurrentSnapshots() {
+        AuditLookup lookup = lookups.getIfAvailable();
+        if (lookup == null) {
+            return;
+        }
+        for (EntityType<?> type : entityManager.getMetamodel().getEntities()) {
+            Class<?> javaType = type.getJavaType();
+            if (!Audited.class.isAssignableFrom(javaType)) {
+                continue;
+            }
+            List<?> rows = entityManager
+                    .createQuery("select e from " + type.getName() + " e where e.auditId is not null", javaType)
+                    .getResultList();
+            for (Object row : rows) {
+                String action = AuditTrailSupport.missingSnapshotAction(lookup, row);
+                if (action != null) {
+                    AuditTrailSupport.record(row, action);
                 }
             }
-            entityManager.flush();
-        }));
+        }
     }
 }

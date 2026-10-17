@@ -18,6 +18,11 @@ public class DocumentAuditStore implements AuditSink, AuditLookup {
     }
 
     @Override
+    public String auditTable() {
+        return "DOCUMENT_AUDIT";
+    }
+
+    @Override
     public void append(List<AuditEvent> events) {
         for (AuditEvent event : events) {
             DocumentAuditEntity row = new DocumentAuditEntity();

@@ -18,6 +18,11 @@ public class RefundAuditStore implements AuditSink, AuditLookup {
     }
 
     @Override
+    public String auditTable() {
+        return "REFUND_AUDIT";
+    }
+
+    @Override
     public void append(List<AuditEvent> events) {
         for (AuditEvent event : events) {
             RefundAuditEntity row = new RefundAuditEntity();

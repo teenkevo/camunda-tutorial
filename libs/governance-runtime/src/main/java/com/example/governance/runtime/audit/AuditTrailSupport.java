@@ -1,11 +1,15 @@
 package com.example.governance.runtime.audit;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.sql.PreparedStatement;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,12 +17,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.hibernate.Hibernate;
+import org.hibernate.Session;
+import org.hibernate.engine.spi.SessionImplementor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Component
 public class AuditTrailSupport implements ApplicationContextAware {
@@ -63,6 +72,39 @@ public class AuditTrailSupport implements ApplicationContextAware {
         enqueue(sink, event);
     }
 
+    /**
+     * {@code BASELINE} when the row has no history, {@code UPDATED} when the newest snapshot
+     * does not match the current version or status, or null when history is already current.
+     */
+    public static String missingSnapshotAction(AuditLookup lookup, Object entity) {
+        if (!(entity instanceof Audited audited) || audited.getAuditId() == null || audited.getAuditId().isBlank()) {
+            return null;
+        }
+        List<AuditEntryResponse> history = lookup.find(audited.getAuditId());
+        if (history.isEmpty()) {
+            return "BASELINE";
+        }
+        Object storedSnapshot = history.get(history.size() - 1).getSnapshot();
+        if (!(storedSnapshot instanceof Map<?, ?> stored)) {
+            return null;
+        }
+        Map<String, Object> current;
+        try {
+            current = MAPPER.readValue(snapshot(entity), new TypeReference<>() {});
+        } catch (Exception exception) {
+            throw new IllegalStateException("Cannot compare audit snapshot", exception);
+        }
+        for (String field : List.of("versionNo", "status", "lifecycleState")) {
+            if (!stored.containsKey(field) || !current.containsKey(field)) {
+                continue;
+            }
+            if (!String.valueOf(stored.get(field)).equals(String.valueOf(current.get(field)))) {
+                return "UPDATED";
+            }
+        }
+        return null;
+    }
+
     static String snapshot(Object entity) {
         Map<String, Object> values = new LinkedHashMap<>();
         Class<?> type = Hibernate.getClass(entity);
@@ -101,6 +143,12 @@ public class AuditTrailSupport implements ApplicationContextAware {
     }
 
     private static void enqueue(AuditSink sink, AuditEvent event) {
+        // Inserts flush early, so beforeCommit still runs. Updates flush inside the database
+        // commit, after beforeCommit, so write them on the current connection immediately.
+        if (flushInProgress()) {
+            insert(sink, List.of(event));
+            return;
+        }
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             sink.append(List.of(event));
             return;
@@ -113,24 +161,93 @@ public class AuditTrailSupport implements ApplicationContextAware {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void beforeCommit(boolean readOnly) {
-                    @SuppressWarnings("unchecked")
-                    List<AuditEvent> events =
-                            (List<AuditEvent>) TransactionSynchronizationManager.getResource(RESOURCE);
-                    if (events != null && !events.isEmpty()) {
-                        sink.append(List.copyOf(events));
-                        events.clear();
-                    }
+                    writePending(sink);
                 }
 
                 @Override
                 public void afterCompletion(int status) {
-                    if (TransactionSynchronizationManager.hasResource(RESOURCE)) {
-                        TransactionSynchronizationManager.unbindResource(RESOURCE);
+                    List<AuditEvent> leftover = takePending();
+                    if (status == STATUS_COMMITTED && leftover != null && !leftover.isEmpty()) {
+                        writeAfterCommit(sink, leftover);
                     }
                 }
             });
         }
         pending.add(event);
+    }
+
+    private static void writePending(AuditSink sink) {
+        List<AuditEvent> events = takePending();
+        if (events != null && !events.isEmpty()) {
+            sink.append(events);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<AuditEvent> takePending() {
+        if (!TransactionSynchronizationManager.hasResource(RESOURCE)) {
+            return List.of();
+        }
+        List<AuditEvent> events = (List<AuditEvent>) TransactionSynchronizationManager.unbindResource(RESOURCE);
+        return events == null ? List.of() : List.copyOf(events);
+    }
+
+    private static void writeAfterCommit(AuditSink sink, List<AuditEvent> events) {
+        if (context == null) {
+            return;
+        }
+        PlatformTransactionManager manager = context.getBeanProvider(PlatformTransactionManager.class).getIfAvailable();
+        if (manager == null) {
+            sink.append(events);
+            return;
+        }
+        TransactionTemplate template = new TransactionTemplate(manager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        template.executeWithoutResult(status -> sink.append(events));
+    }
+
+    private static boolean flushInProgress() {
+        EntityManager entityManager = entityManager();
+        if (entityManager == null) {
+            return false;
+        }
+        SessionImplementor session = entityManager.unwrap(SessionImplementor.class);
+        return session.getPersistenceContext().isFlushing();
+    }
+
+    private static void insert(AuditSink sink, List<AuditEvent> events) {
+        EntityManager entityManager = entityManager();
+        if (entityManager == null) {
+            sink.append(events);
+            return;
+        }
+        String table = sink.auditTable();
+        if (table == null || !table.matches("[A-Z_]+")) {
+            throw new IllegalStateException("Unsafe audit table name: " + table);
+        }
+        String sql = "INSERT INTO " + table
+                + " (AUDIT_ID, TABLE_NAME, ROW_ID, ACTION, SNAPSHOT, OCCURRED_AT) VALUES (?, ?, ?, ?, ?, ?)";
+        entityManager.unwrap(Session.class).doWork(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                for (AuditEvent event : events) {
+                    statement.setString(1, event.auditId());
+                    statement.setString(2, event.tableName());
+                    statement.setString(3, event.rowId());
+                    statement.setString(4, event.action());
+                    statement.setString(5, event.snapshot());
+                    statement.setTimestamp(6, Timestamp.from(event.occurredAt()));
+                    statement.addBatch();
+                }
+                statement.executeBatch();
+            }
+        });
+    }
+
+    private static EntityManager entityManager() {
+        if (context == null) {
+            return null;
+        }
+        return context.getBeanProvider(EntityManager.class).getIfUnique();
     }
 
     private static AuditSink sink() {

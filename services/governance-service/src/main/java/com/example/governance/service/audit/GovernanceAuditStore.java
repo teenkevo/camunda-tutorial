@@ -18,6 +18,11 @@ public class GovernanceAuditStore implements AuditSink, AuditLookup {
     }
 
     @Override
+    public String auditTable() {
+        return "GOVERNANCE_AUDIT";
+    }
+
+    @Override
     public void append(List<AuditEvent> events) {
         for (AuditEvent event : events) {
             GovernanceAuditEntity row = new GovernanceAuditEntity();

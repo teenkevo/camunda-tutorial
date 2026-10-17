@@ -18,6 +18,11 @@ public class RegistrationAuditStore implements AuditSink, AuditLookup {
     }
 
     @Override
+    public String auditTable() {
+        return "REGISTRATION_AUDIT";
+    }
+
+    @Override
     public void append(List<AuditEvent> events) {
         for (AuditEvent event : events) {
             RegistrationAuditEntity row = new RegistrationAuditEntity();
