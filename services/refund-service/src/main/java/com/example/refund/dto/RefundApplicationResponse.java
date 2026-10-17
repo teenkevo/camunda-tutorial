@@ -11,7 +11,7 @@ import lombok.Data;
 public class RefundApplicationResponse {
 
     private Long id;
-    private String applicationId;
+    private String drn;
     private String processInstanceId;
 
     @Sensitive(SensitiveType.PII)
@@ -22,7 +22,6 @@ public class RefundApplicationResponse {
 
     private List<String> taxTypes;
 
-    private String drn;
     private String station;
     private String riskLevel;
     private Boolean approved;

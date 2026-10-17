@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Demo: plant a Data Quality issue on REFUND_SERVICE.RFND_APPL —
-# one row with APPLICATION_ID IS NULL (for OpenMetadata column Not-Null / null-proportion tests).
+# Demo: plant a Data Quality issue on DOCUMENT_SERVICE.DOCUMENT_RECORD —
+# one row with DRN IS NULL (for OpenMetadata column Not-Null / null-proportion tests).
 #
 # Usage:
 #   ./scripts/demo/inject-refund-missing-application-id.sh
@@ -20,12 +20,12 @@ for arg in "$@"; do
     -y|--yes) YES=1 ;;
     -h|--help)
       cat <<'EOF'
-Insert a RFND_APPL row with APPLICATION_ID NULL for DQ demos.
+Insert a DOCUMENT_RECORD row with DRN NULL for DQ demos.
 
   ./scripts/demo/inject-refund-missing-application-id.sh
   ./scripts/demo/inject-refund-missing-application-id.sh --yes
 
-Alters APPLICATION_ID to nullable if needed (demo only). Prints inspection SQL afterward.
+Alters DRN to nullable if needed (demo only). Prints inspection SQL afterward.
 EOF
       exit 0
       ;;
@@ -46,8 +46,8 @@ if [[ "$(docker inspect -f '{{.State.Running}}' "$ORACLE_CTR" 2>/dev/null || ech
   exit 1
 fi
 
-info "Inject DQ issue: RFND_APPL row without APPLICATION_ID"
-warn "This relaxes NOT NULL on APPLICATION_ID for the demo and inserts a bad row."
+info "Inject DQ issue: DOCUMENT_RECORD row without DRN"
+warn "This relaxes NOT NULL on DRN for the demo and inserts a bad row."
 
 if [[ "$YES" -ne 1 ]]; then
   printf 'Continue? [y/N] '
@@ -61,91 +61,66 @@ if [[ "$YES" -ne 1 ]]; then
   esac
 fi
 
-sqlplus_refund() {
+sqlplus_document() {
   docker exec -i "$ORACLE_CTR" bash -lc \
-    'sqlplus -s refund_service/Refund_Pass_1@//localhost:1521/FREEPDB1'
+    'sqlplus -s document_service/Document_Pass_1@//localhost:1521/FREEPDB1'
 }
 
 info "Applying DDL + insert..."
-sqlplus_refund <<'SQL'
+sqlplus_document <<'SQL'
 SET FEEDBACK ON
--- Demo only: allow null APPLICATION_ID so DQ can fail on completeness.
+-- Demo only: allow null DRN so DQ can fail on completeness.
 -- ORA-01451 = column already nullable (safe to ignore on re-runs).
 WHENEVER SQLERROR CONTINUE
-ALTER TABLE RFND_APPL MODIFY (APPLICATION_ID NULL);
+ALTER TABLE DOCUMENT_RECORD MODIFY (DRN NULL);
 WHENEVER SQLERROR EXIT FAILURE
 
--- Avoid duplicate demo rows if script is re-run
-DELETE FROM RFND_APPL WHERE STATUS = 'DQ_MISSING_APPLICATION_ID';
-DELETE FROM RFND_APPL WHERE APPLICATION_ID IS NULL;
+DELETE FROM DOCUMENT_RECORD WHERE STATUS = 'DQ_MISSING_DRN';
+DELETE FROM DOCUMENT_RECORD WHERE DRN IS NULL;
 
-INSERT INTO RFND_APPL (
-  ID, APPLICATION_ID, FIRST_NAME, LAST_NAME, STATUS, CREATED_AT, UPDATED_AT
+INSERT INTO DOCUMENT_RECORD (
+  ID, DRN, DOCUMENT_TYPE, SCHEMA_VERSION, STATUS, PAYLOAD, CREATED_AT, UPDATED_AT, VERSION_NO
 ) VALUES (
-  (SELECT NVL(MAX(ID), 0) + 1 FROM RFND_APPL),
+  (SELECT NVL(MAX(ID), 0) + 1 FROM DOCUMENT_RECORD),
   NULL,
-  'DQ',
-  'TestWithoutAppId',
-  'DQ_MISSING_APPLICATION_ID',
+  'REFUND_APPLICATION',
+  1,
+  'DQ_MISSING_DRN',
+  '{}',
   SYSTIMESTAMP,
-  SYSTIMESTAMP
+  SYSTIMESTAMP,
+  0
 );
 
 COMMIT;
 
-PROMPT --- Rows with missing APPLICATION_ID ---
-COLUMN application_id FORMAT A20
-COLUMN first_name FORMAT A12
-COLUMN last_name FORMAT A20
-COLUMN status FORMAT A30
-SELECT ID, APPLICATION_ID, FIRST_NAME, LAST_NAME, STATUS
-  FROM RFND_APPL
- WHERE APPLICATION_ID IS NULL
-    OR STATUS = 'DQ_MISSING_APPLICATION_ID';
-
-PROMPT --- Count ---
-SELECT COUNT(*) AS missing_application_id_count
-  FROM RFND_APPL
- WHERE APPLICATION_ID IS NULL;
+PROMPT --- Rows with missing DRN ---
+SELECT ID, DRN, DOCUMENT_TYPE, STATUS FROM DOCUMENT_RECORD WHERE DRN IS NULL;
 
 EXIT;
 SQL
 
-ok "Bad row inserted (STATUS = DQ_MISSING_APPLICATION_ID)"
+ok "Bad row inserted (STATUS = DQ_MISSING_DRN)"
 
 echo
 info "Inspection SQL (run in sqlplus / SQL Developer / OM)"
 cat <<'EOF'
 
--- As REFUND_SERVICE (or OM_CATALOG with SELECT):
-SELECT ID, APPLICATION_ID, FIRST_NAME, LAST_NAME, STATUS
-  FROM REFUND_SERVICE.RFND_APPL
- WHERE APPLICATION_ID IS NULL;
-
-SELECT COUNT(*) AS missing_application_id_count
-  FROM REFUND_SERVICE.RFND_APPL
- WHERE APPLICATION_ID IS NULL;
-
--- From host via Docker:
-docker exec -it camunda-tutorial-oracle bash -lc \
-  "sqlplus -s refund_service/Refund_Pass_1@//localhost:1521/FREEPDB1 <<'SQL'
-SELECT ID, APPLICATION_ID, FIRST_NAME, LAST_NAME, STATUS
-  FROM RFND_APPL WHERE APPLICATION_ID IS NULL;
-EXIT;
-SQL"
+-- As DOCUMENT_SERVICE (or OM_CATALOG with SELECT):
+SELECT ID, DRN, DOCUMENT_TYPE, STATUS
+  FROM DOCUMENT_SERVICE.DOCUMENT_RECORD
+ WHERE DRN IS NULL;
 
 EOF
 
 info "Cleanup SQL (after the DQ demo)"
 cat <<'EOF'
 
-DELETE FROM REFUND_SERVICE.RFND_APPL WHERE APPLICATION_ID IS NULL;
--- Restore NOT NULL if desired (fails if any nulls remain):
--- ALTER TABLE REFUND_SERVICE.RFND_APPL MODIFY (APPLICATION_ID VARCHAR2(255) NOT NULL);
+DELETE FROM DOCUMENT_SERVICE.DOCUMENT_RECORD WHERE DRN IS NULL;
 COMMIT;
 
 
 EOF
 
-step "Re-run your OpenMetadata column test on APPLICATION_ID — it should fail."
+step "Re-run your OpenMetadata column test on DRN — it should fail."
 dim "Companion: ./scripts/demo/reset-openmetadata.sh"

@@ -56,7 +56,7 @@ BOOTSTRAP_SERVICES=(
 DOMAIN_SERVICES=(
   "camunda-service"
   "refund-service"
-  "taxpayer-service"
+  "registration-service"
 )
 SERVICES=(
   "${BOOTSTRAP_SERVICES[@]}"
@@ -251,26 +251,61 @@ for ((i = 1; i <= OM_ATTEMPTS; i++)); do
 done
 
 info "Checking service schemas..."
-if ! "${COMPOSE[@]}" exec -T oracle bash -lc \
-  'sqlplus -s refund_service/Refund_Pass_1@//localhost:1521/FREEPDB1 <<EOF
-WHENEVER SQLERROR EXIT FAILURE
-SELECT 1 FROM dual;
-EXIT;
-EOF' >/dev/null 2>&1; then
-  warn "Schemas not ready yet — applying CREATE SESSION grants..."
-  "${COMPOSE[@]}" exec -T oracle bash -lc 'sqlplus -s sys/Oracle_Pass_1@//localhost:1521/FREE as sysdba <<EOF
+# Ensure registration_service exists (replaces legacy taxpayer_service on existing Oracle volumes).
+"${COMPOSE[@]}" exec -T oracle bash -lc 'sqlplus -s sys/Oracle_Pass_1@//localhost:1521/FREE as sysdba <<EOF
 ALTER SESSION SET CONTAINER = FREEPDB1;
+WHENEVER SQLERROR CONTINUE
+CREATE USER registration_service IDENTIFIED BY "Registration_Pass_1"
+  DEFAULT TABLESPACE users TEMPORARY TABLESPACE temp QUOTA UNLIMITED ON users;
+CREATE USER document_service IDENTIFIED BY "Document_Pass_1"
+  DEFAULT TABLESPACE users TEMPORARY TABLESPACE temp QUOTA UNLIMITED ON users;
+GRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,
+      CREATE TABLE, CREATE TRIGGER TO registration_service;
+GRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,
+      CREATE TABLE, CREATE TRIGGER TO document_service;
+DROP TABLE registration_service.reg_ft_appl CASCADE CONSTRAINTS;
+DROP TABLE refund_service.rfnd_appl CASCADE CONSTRAINTS;
+ALTER TABLE registration_service.REG_TAXPAYER RENAME TO REGISTRATION_TAXPAYER;
+ALTER TABLE registration_service.REGISTRATION_TAXPAYER RENAME CONSTRAINT UK_REG_TAXPAYER_ID TO UK_REGISTRATION_TAXPAYER_IDENTIFIER;
+ALTER TABLE registration_service.REG_TAX_OBLIG RENAME TO REGISTRATION_TAX_OBLIGATION;
+ALTER TABLE document_service.DOC_DOCUMENT RENAME TO DOCUMENT_RECORD;
+ALTER TABLE document_service.DOC_DOCUMENT_EVENT RENAME TO DOCUMENT_EVENT;
+ALTER TABLE governance_service.GOV_ASSET RENAME TO GOVERNANCE_ASSET;
+ALTER TABLE governance_service.GOVERNANCE_ASSET RENAME CONSTRAINT UK_GOV_ASSET TO UK_GOVERNANCE_ASSET;
+ALTER TABLE governance_service.GOV_VALIDATION RENAME TO GOVERNANCE_VALIDATION;
+ALTER TABLE governance_service.GOVERNANCE_VALIDATION RENAME CONSTRAINT UK_GOV_VALIDATION_ID TO UK_GOVERNANCE_VALIDATION_ID;
+UPDATE governance_service.GOVERNANCE_ASSET
+   SET table_name = CASE table_name
+         WHEN 'REG_TAXPAYER' THEN 'REGISTRATION_TAXPAYER'
+         WHEN 'REG_TAX_OBLIG' THEN 'REGISTRATION_TAX_OBLIGATION'
+         WHEN 'DOC_DOCUMENT' THEN 'DOCUMENT_RECORD'
+         WHEN 'DOC_DOCUMENT_EVENT' THEN 'DOCUMENT_EVENT'
+         WHEN 'GOV_ASSET' THEN 'GOVERNANCE_ASSET'
+         WHEN 'GOV_VALIDATION' THEN 'GOVERNANCE_VALIDATION'
+         ELSE table_name
+       END
+ WHERE table_name IN (
+   'REG_TAXPAYER', 'REG_TAX_OBLIG', 'DOC_DOCUMENT', 'DOC_DOCUMENT_EVENT', 'GOV_ASSET', 'GOV_VALIDATION'
+ );
+DELETE FROM governance_service.GOVERNANCE_ASSET
+ WHERE table_name IN ('RFND_APPL', 'REG_FT_APPL');
+COMMIT;
 GRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,
       CREATE TABLE, CREATE TRIGGER, CREATE TYPE TO camunda_service;
 GRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,
       CREATE TABLE, CREATE TRIGGER TO governance_service;
 GRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,
       CREATE TABLE, CREATE TRIGGER TO refund_service;
-GRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,
-      CREATE TABLE, CREATE TRIGGER TO taxpayer_service;
 EXIT;
-EOF' >/dev/null
-  ok "CREATE SESSION grants applied"
+EOF' >/dev/null || true
+
+if ! "${COMPOSE[@]}" exec -T oracle bash -lc \
+  'sqlplus -s registration_service/Registration_Pass_1@//localhost:1521/FREEPDB1 <<EOF
+WHENEVER SQLERROR EXIT FAILURE
+SELECT 1 FROM dual;
+EXIT;
+EOF' >/dev/null 2>&1; then
+  warn "registration_service schema not reachable — check Oracle logs"
 else
   ok "Service schemas reachable"
 fi
@@ -295,7 +330,20 @@ start_service() {
 
   nohup "$MVN" -pl "services/${svc}" -am spring-boot:run \
     >"$log_file" 2>&1 &
-  echo $! >"$pid_file"
+  local launched=$!
+  echo "$launched" >"$pid_file"
+
+  # The mvn shell can exit after it execs/spawns the Maven JVM. Track that JVM,
+  # which stays alive for the life of spring-boot:run.
+  local attempt durable
+  for ((attempt = 1; attempt <= 20; attempt++)); do
+    durable="$(pgrep -f "services/${svc}.*spring-boot:run" 2>/dev/null | head -n 1 || true)"
+    if [[ -n "$durable" ]]; then
+      echo "$durable" >"$pid_file"
+      break
+    fi
+    sleep 0.3
+  done
   step "${svc} starting (pid $(cat "$pid_file"), log ${log_file})"
 }
 
@@ -305,6 +353,14 @@ for svc in "${BOOTSTRAP_SERVICES[@]}"; do
 done
 wait_service "governance-service" "${GOVERNANCE_URL}/api/governance/naming-domains"
 
+info "Starting document-service (processes create documents before other steps)..."
+start_service "document-service"
+wait_service "document-service" "http://localhost:8085/api/documents"
+
+info "Starting authority-service (dummy NIRA and URSB APIs)..."
+start_service "authority-service"
+wait_service "authority-service" "http://localhost:8086/api/authorities/health"
+
 info "Starting domain services..."
 for svc in "${DOMAIN_SERVICES[@]}"; do
   start_service "$svc"
@@ -312,17 +368,19 @@ done
 
 info "Waiting for domain services (Maven boot can take a few minutes)..."
 wait_service "refund-service" "http://localhost:8082/api/refund-applications"
-wait_service "taxpayer-service" "http://localhost:8083/api/taxpayer-registrations"
+wait_service "registration-service" "http://localhost:8083/api/registrations/first-time"
 # Catalog publish happens on domain-service ApplicationRunner after start;
 # publisher now retries if governance was briefly unreachable.
 sleep 3
 
 CONFORM_FAILED=0
 print_conformance "refund-service" || CONFORM_FAILED=1
-print_conformance "taxpayer-service" || CONFORM_FAILED=1
+print_conformance "registration-service" || CONFORM_FAILED=1
+print_conformance "document-service" || CONFORM_FAILED=1
 
 print_validations "refund-service" || true
-print_validations "taxpayer-service" || true
+print_validations "registration-service" || true
+print_validations "document-service" || true
 
 echo
 info "Done. Endpoints:"
@@ -335,11 +393,14 @@ step "Asset resolve  ${GOVERNANCE_URL}/api/governance/assets/refunds.application
 step "Conformance    ${GOVERNANCE_URL}/api/governance/conformance?service=refund-service"
 step "OM webhook     ${GOVERNANCE_URL}/api/governance/webhooks/openmetadata"
 step "Refunds        http://localhost:8082/api/refund-applications"
-step "Taxpayer       http://localhost:8083/api/taxpayer-registrations"
+step "Registration   http://localhost:8083/api/registrations/first-time"
+step "Documents      http://localhost:8085/api/documents"
+step "NIRA           http://localhost:8086/api/nira/persons/lookup"
+step "URSB           http://localhost:8086/api/ursb/entities/lookup"
 echo
 
 dim "Logs:  ${LOG_DIR}/"
-dim "Stop:  scripts/stop-all.sh [--with-db]"
+dim "Stop:  scripts/stop-all.sh [--with-db] [--with-om]"
 
 if [[ "$CONFORM_FAILED" -ne 0 ]]; then
   echo

@@ -39,20 +39,26 @@ app:
       domains:
         - id: refunds
           label: Refunds
-          table-prefix: RFND_
+          table-prefix: REFUND_
           services:
             - refund-service
         - id: taxpayer-registration
           label: Taxpayer registration
-          table-prefix: REG_
-          table-pattern: "^REG_[A-Z0-9_]+$"
+          table-prefix: REGISTRATION_
+          table-pattern: "^REGISTRATION_[A-Z0-9_]+$"
           services:
-            - taxpayer-service
+            - registration-service
         - id: governance
           label: Governance catalog
-          table-prefix: GOV_
+          table-prefix: GOVERNANCE_
           services:
             - governance-service
+        - id: documents
+          label: Documents
+          table-prefix: DOCUMENT_
+          table-pattern: "^DOCUMENT_[A-Z0-9_]+$"
+          services:
+            - document-service
     openmetadata:
       enabled: true
       # Only enforced when an assetId is present on a synced entity row
@@ -65,4 +71,5 @@ app:
       seed: false
       service-refresh-urls:
         refund-service: http://localhost:8082
-        taxpayer-service: http://localhost:8083
+        registration-service: http://localhost:8083
+        document-service: http://localhost:8085

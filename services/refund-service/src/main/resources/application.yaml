@@ -38,3 +38,5 @@ app:
       fail-on-non-compliant: false
   camunda:
     base-url: http://localhost:8080
+  document:
+    base-url: http://localhost:8085

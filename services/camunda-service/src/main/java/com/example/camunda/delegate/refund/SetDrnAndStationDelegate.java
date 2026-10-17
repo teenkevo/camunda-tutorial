@@ -17,12 +17,11 @@ public class SetDrnAndStationDelegate implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) {
-        String applicationId = String.valueOf(execution.getVariable("applicationId"));
+        String drn = String.valueOf(execution.getVariable("drn"));
         Map<?, ?> result = domainServiceClient.postRefund(
-                "/internal/refund-process/" + applicationId + "/assign-drn-station",
+                "/internal/refund-process/" + drn + "/assign-station",
                 Map.of()
         );
-        execution.setVariable("drn", result.get("drn"));
         execution.setVariable("station", result.get("station"));
         execution.setVariable("applicationStatus", result.get("applicationStatus"));
     }

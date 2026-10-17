@@ -4,7 +4,6 @@ import com.example.camunda.client.CamundaProcessClient;
 import com.example.refund.dto.RefundApplicationRequest;
 import com.example.refund.dto.RefundApplicationResponse;
 import com.example.refund.dto.RefundApplicationStartResponse;
-import com.example.refund.mapper.RefundApplicationMapper;
 import com.example.refund.service.RefundApplicationService;
 import jakarta.validation.Valid;
 import java.util.HashMap;
@@ -28,16 +27,13 @@ public class RefundApplicationController {
 
     private final CamundaProcessClient camundaProcessClient;
     private final RefundApplicationService refundApplicationService;
-    private final RefundApplicationMapper refundApplicationMapper;
 
     public RefundApplicationController(
             CamundaProcessClient camundaProcessClient,
-            RefundApplicationService refundApplicationService,
-            RefundApplicationMapper refundApplicationMapper
+            RefundApplicationService refundApplicationService
     ) {
         this.camundaProcessClient = camundaProcessClient;
         this.refundApplicationService = refundApplicationService;
-        this.refundApplicationMapper = refundApplicationMapper;
     }
 
     @PostMapping
@@ -54,25 +50,28 @@ public class RefundApplicationController {
         variables.put("taxTypes", taxTypes);
 
         String processInstanceId = camundaProcessClient.startProcess("refund-application", variables);
+        Map<String, Object> document = refundApplicationService.findByProcessInstanceId(processInstanceId);
+        refundApplicationService.record(document);
 
         RefundApplicationStartResponse response = new RefundApplicationStartResponse();
+        response.setDrn(String.valueOf(document.get("drn")));
         response.setProcessInstanceId(processInstanceId);
         response.setProcessDefinitionKey("refund-application");
         response.setFirstName(firstName);
         response.setLastName(lastName);
         response.setTaxTypes(taxTypes);
-        response.setMessage("Process started on shared Camunda. Query /api/refund-applications for DB state.");
+        response.setMessage("Refund document created. DRN is used for the rest of the process.");
         return response;
     }
 
     @GetMapping
     public List<RefundApplicationResponse> list() {
-        return refundApplicationMapper.toResponseList(refundApplicationService.findAll());
+        return refundApplicationService.findAll();
     }
 
-    @GetMapping("/{applicationId}")
-    public RefundApplicationResponse get(@PathVariable("applicationId") String applicationId) {
-        return refundApplicationMapper.toResponse(refundApplicationService.getByApplicationId(applicationId));
+    @GetMapping("/{drn}")
+    public RefundApplicationResponse get(@PathVariable("drn") String drn) {
+        return refundApplicationService.getByDrn(drn);
     }
 
     private static List<String> normalizeTaxTypes(List<String> raw) {

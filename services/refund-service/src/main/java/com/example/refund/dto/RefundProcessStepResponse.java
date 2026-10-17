@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class RefundProcessStepResponse {
-    private String applicationId;
     private String applicationStatus;
     private String createdAt;
     private List<String> taxTypes;

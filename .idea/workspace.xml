@@ -5,11 +5,63 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="adb3e0ca-16fe-4fad-88a9-af24f6e62345" name="Changes" comment="Updates">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/oracle/01-create-schemas.sql" beforeDir="false" afterPath="$PROJECT_DIR$/db/oracle/01-create-schemas.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/oracle/03-openmetadata-catalog-user.sql" beforeDir="false" afterPath="$PROJECT_DIR$/db/oracle/03-openmetadata-catalog-user.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/oracle/init/01-create-schemas.sh" beforeDir="false" afterPath="$PROJECT_DIR$/db/oracle/init/01-create-schemas.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/demo/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/demo/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/demo/inject-refund-missing-application-id.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/demo/inject-refund-missing-application-id.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/start-all.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/start-all.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/stop-all.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/stop-all.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/client/DomainServiceClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/client/DomainServiceClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/AutoApproveDelegate.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/AutoApproveDelegate.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CheckRiskLevelDelegate.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CheckRiskLevelDelegate.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/NotifyTaxpayerDelegate.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/NotifyTaxpayerDelegate.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/SetDrnAndStationDelegate.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/SetDrnAndStationDelegate.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/taxpayer/FinalizeRegistrationDelegate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/taxpayer/PrepareTaxTypesDelegate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/taxpayer/RegisterTaxTypeDelegate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/java/com/example/camunda/delegate/taxpayer/ValidateTaxpayerDelegate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/resources/processes/refund-application.bpmn" beforeDir="false" afterPath="$PROJECT_DIR$/services/camunda-service/src/main/resources/processes/refund-application.bpmn" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/camunda-service/src/main/resources/processes/taxpayer-registration.bpmn" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/config/GovernanceDomainNamingRule.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/config/GovernanceDomainNamingRule.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/config/OpenMetadataProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/config/OpenMetadataProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceAssetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceAssetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceValidationEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/java/com/example/governance/service/entity/GovernanceValidationEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/governance-service/src/test/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/services/governance-service/src/test/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/controller/RefundProcessController.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/controller/RefundProcessController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/mapper/RefundApplicationMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/persistence/StringListConverter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/repository/RefundApplicationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/repository/RefundApplicationRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/refund-service/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/services/refund-service/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/TaxpayerServiceApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/config/RestClientConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/controller/TaxpayerProcessController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/controller/TaxpayerRegistrationController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerProcessRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerProcessStepResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationStartResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/entity/TaxpayerRegistrationEntity.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/repository/TaxpayerRegistrationRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/java/com/example/taxpayer/service/TaxpayerRegistrationService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taxpayer-service/src/main/resources/application.yaml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,23 +94,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.5201335203263078" />
-      <entry key="MS500" value="3.3260747850105488" />
-      <entry key="S2" value="4.503364179130751" />
-      <entry key="S5" value="5.516029346068639" />
-      <entry key="S10" value="6.812648494635745" />
-      <entry key="S30" value="8.855744198458908" />
-      <entry key="S60" value="11.917094369294244" />
-      <entry key="M2" value="21.577586696238036" />
-      <entry key="M5" value="64.88866461173167" />
-      <entry key="M10" value="151.14032087498396" />
-      <entry key="M15" value="233.63581754059012" />
-      <entry key="M30" value="414.69675683480733" />
-      <entry key="H1" value="591.1200641765623" />
-      <entry key="H2" value="720.099295921063" />
-      <entry key="H4" value="823.9216275284668" />
-      <entry key="D1" value="3017.4265994977363" />
-      <entry key="W1" value="10601.91803500124" />
+      <entry key="MS100" value="1.0090897022056944" />
+      <entry key="MS500" value="2.863549320829904" />
+      <entry key="S2" value="11.192817178135575" />
+      <entry key="S5" value="24.071685344455346" />
+      <entry key="S10" value="39.54638756998931" />
+      <entry key="S30" value="66.96847408890382" />
+      <entry key="S60" value="107.5038422605953" />
+      <entry key="M2" value="190.37501452980172" />
+      <entry key="M5" value="327.0872936307788" />
+      <entry key="M10" value="469.94248796830914" />
+      <entry key="M15" value="610.7834581270861" />
+      <entry key="M30" value="1016.9691283800611" />
+      <entry key="H1" value="1596.5325615800034" />
+      <entry key="H2" value="2200.009296400121" />
+      <entry key="H4" value="2703.1937961249077" />
+      <entry key="D1" value="4166.1824831803615" />
+      <entry key="W1" value="12603.437356733108" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -68,35 +120,35 @@
       <entry key="S10" value="0.0" />
       <entry key="S30" value="0.0" />
       <entry key="S60" value="0.0" />
-      <entry key="M2" value="2.6435178002144294E-190" />
-      <entry key="M5" value="2.232420781852667E-76" />
-      <entry key="M10" value="2.1139252037156144E-38" />
-      <entry key="M15" value="9.723430651567273E-26" />
-      <entry key="M30" value="5.007883615630228E-13" />
-      <entry key="H1" value="1.4347799358979546E-6" />
-      <entry key="H2" value="0.002780157299435292" />
-      <entry key="H4" value="0.12745826562706605" />
-      <entry key="D1" value="3.1685876041296863" />
-      <entry key="W1" value="7.644966268737225" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="9.61371577480156E-271" />
+      <entry key="M10" value="1.387226024135447E-135" />
+      <entry key="M15" value="1.5819445681822964E-90" />
+      <entry key="M30" value="2.0199475721975954E-45" />
+      <entry key="H1" value="9.11230462805805E-23" />
+      <entry key="H2" value="2.2155973461028813E-11" />
+      <entry key="H4" value="1.1378335583555095E-5" />
+      <entry key="D1" value="0.6698601995558636" />
+      <entry key="W1" value="6.122995275785321" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.487431665038356" />
-      <entry key="MS500" value="3.3072900682305533" />
-      <entry key="S2" value="4.496825288749173" />
-      <entry key="S5" value="5.512700723522074" />
-      <entry key="S10" value="6.810507090959552" />
-      <entry key="S30" value="8.854778318424428" />
-      <entry key="S60" value="11.916411057939133" />
-      <entry key="M2" value="21.576934319399662" />
-      <entry key="M5" value="64.88798748113437" />
-      <entry key="M10" value="151.13957755016708" />
-      <entry key="M15" value="233.6350156937667" />
-      <entry key="M30" value="414.6959733550289" />
-      <entry key="H1" value="591.1194747349316" />
-      <entry key="H2" value="720.1017052981865" />
-      <entry key="H4" value="824.0488413249736" />
-      <entry key="D1" value="3020.594625978208" />
-      <entry key="W1" value="10609.56269108884" />
+      <entry key="MS100" value="0.9951968996426569" />
+      <entry key="MS500" value="2.855390063472816" />
+      <entry key="S2" value="11.184537703757407" />
+      <entry key="S5" value="24.064584701777928" />
+      <entry key="S10" value="39.54062826423458" />
+      <entry key="S30" value="66.9652428696992" />
+      <entry key="S60" value="107.50117940599468" />
+      <entry key="M2" value="190.37258020173724" />
+      <entry key="M5" value="327.08556610471845" />
+      <entry key="M10" value="469.9412048018591" />
+      <entry key="M15" value="610.7823211813247" />
+      <entry key="M30" value="1016.9681491401058" />
+      <entry key="H1" value="1596.5317729197945" />
+      <entry key="H2" value="2200.0087427685926" />
+      <entry key="H4" value="2703.1934630169662" />
+      <entry key="D1" value="4166.852148648973" />
+      <entry key="W1" value="12609.560090787527" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">

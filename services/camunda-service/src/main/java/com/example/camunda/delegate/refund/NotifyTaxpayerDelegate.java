@@ -18,7 +18,7 @@ public class NotifyTaxpayerDelegate implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) {
-        String applicationId = String.valueOf(execution.getVariable("applicationId"));
+        String drn = String.valueOf(execution.getVariable("drn"));
         Object approvedVar = execution.getVariable("approved");
         boolean approved = approvedVar instanceof Boolean b ? b : Boolean.parseBoolean(String.valueOf(approvedVar));
 
@@ -31,7 +31,7 @@ public class NotifyTaxpayerDelegate implements JavaDelegate {
         body.put("reviewComment", execution.getVariable("reviewComment"));
 
         Map<?, ?> result = domainServiceClient.postRefund(
-                "/internal/refund-process/" + applicationId + "/notify",
+                "/internal/refund-process/" + drn + "/notify",
                 body
         );
         execution.setVariable("notificationMessage", result.get("notificationMessage"));

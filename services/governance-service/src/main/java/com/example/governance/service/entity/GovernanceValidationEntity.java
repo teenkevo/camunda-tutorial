@@ -20,9 +20,9 @@ import org.hibernate.annotations.Comment;
 @Data
 @Entity
 @Table(
-        name = "GOV_VALIDATION",
+        name = "GOVERNANCE_VALIDATION",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_gov_validation_id",
+                name = "UK_GOVERNANCE_VALIDATION_ID",
                 columnNames = {"validation_id"}
         )
 )

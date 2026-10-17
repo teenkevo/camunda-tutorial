@@ -19,9 +19,9 @@ import org.hibernate.annotations.Comment;
 @Data
 @Entity
 @Table(
-        name = "GOV_ASSET",
+        name = "GOVERNANCE_ASSET",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_gov_asset",
+                name = "UK_GOVERNANCE_ASSET",
                 columnNames = {"service_name", "entity_name", "field_name"}
         )
 )

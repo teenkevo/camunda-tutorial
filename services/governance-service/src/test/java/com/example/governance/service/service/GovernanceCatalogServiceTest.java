@@ -71,7 +71,7 @@ class GovernanceCatalogServiceTest {
         field.setAssetType("FIELD");
         field.setEntityName("com.example.refund.entity.RefundApplicationEntity");
         field.setFieldName("firstName");
-        field.setTableName("RFND_APPL");
+        field.setTableName("REFUND_APPLICATION");
         field.setColumnName("first_name");
         field.setClassification("PII");
         field.setDomain("refunds");
@@ -144,7 +144,7 @@ class GovernanceCatalogServiceTest {
     @Test
     void conformance_failsWhenTableNameBreaksConvention() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setTableName("refund_application");
+        entity.setTableName("RFND_APPL");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
@@ -196,7 +196,7 @@ class GovernanceCatalogServiceTest {
         entity.setAssetType("ENTITY");
         entity.setEntityName("com.example.refund.entity.RefundApplicationEntity");
         entity.setFieldName("");
-        entity.setTableName("RFND_APPL");
+        entity.setTableName("REFUND_APPLICATION");
         entity.setDomain("refunds");
         return entity;
     }

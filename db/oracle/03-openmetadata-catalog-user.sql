@@ -7,7 +7,7 @@
 --   Password:            Om_Catalog_Pass_1
 --   Host and Port:       host.docker.internal:1521
 --   Oracle Service Name: FREEPDB1
---   Database Schema:     REFUND_SERVICE   (or TAXPAYER_SERVICE / …)
+--   Database Schema:     REFUND_SERVICE   (or REGISTRATION_SERVICE / …)
 --   Use DBA Tables:      on (SELECT_CATALOG_ROLE allows DBA_* reads)
 
 ALTER SESSION SET CONTAINER = FREEPDB1;
@@ -36,8 +36,11 @@ GRANT SELECT ANY TABLE TO om_catalog;
 GRANT CREATE SESSION TO om_catalog;
 
 -- Explicit SELECT on known domain tables (safe if tables exist; CONTINUE if not yet created)
-GRANT SELECT ON refund_service.RFND_APPL TO om_catalog;
-GRANT SELECT ON taxpayer_service.REG_TAX_PAYER_MST TO om_catalog;
+GRANT SELECT ON refund_service.REFUND_APPLICATION TO om_catalog;
+GRANT SELECT ON refund_service.REFUND_APPLICATION_TAX_TYPE TO om_catalog;
+GRANT SELECT ON document_service.DOCUMENT_RECORD TO om_catalog;
+GRANT SELECT ON registration_service.REGISTRATION_TAXPAYER TO om_catalog;
+GRANT SELECT ON registration_service.REGISTRATION_TAX_OBLIGATION TO om_catalog;
 GRANT SELECT ON governance_service.GOVERNANCE_ASSET TO om_catalog;
 
 PROMPT OpenMetadata catalog user OM_CATALOG ready.

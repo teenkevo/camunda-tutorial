@@ -4,14 +4,16 @@ import com.example.governance.annotations.Domain;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
-import com.example.refund.persistence.StringListConverter;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,9 +22,15 @@ import org.hibernate.annotations.Comment;
 
 @Data
 @Entity
-@Table(name = "RFND_APPL")
+@Table(
+        name = "REFUND_APPLICATION",
+        uniqueConstraints = @UniqueConstraint(
+                name = "UK_REFUND_APPLICATION_DRN",
+                columnNames = {"drn"}
+        )
+)
 @Domain("refunds")
-@Comment("Refund application business record")
+@Comment("Refund application business record, keyed by the document DRN")
 public class RefundApplicationEntity {
 
     @Id
@@ -30,9 +38,9 @@ public class RefundApplicationEntity {
     @Comment("Surrogate primary key")
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    @Comment("Business identifier for the refund application")
-    private String applicationId;
+    @Column(nullable = false, length = 64)
+    @Comment("Document reference number created for this refund")
+    private String drn;
 
     @Comment("Camunda process instance id that owns this application")
     private String processInstanceId;
@@ -45,13 +53,14 @@ public class RefundApplicationEntity {
     @Comment("Taxpayer family name")
     private String lastName;
 
-    @Convert(converter = StringListConverter.class)
-    @Column(name = "tax_types", length = 120)
-    @Comment("Tax types claimed on the refund (VAT, PAYE, CIT, WHT)")
+    @ElementCollection
+    @CollectionTable(
+            name = "REFUND_APPLICATION_TAX_TYPE",
+            joinColumns = @JoinColumn(name = "refund_application_id")
+    )
+    @Column(name = "tax_type", nullable = false, length = 32)
+    @Comment("Tax type claimed on the refund")
     private List<String> taxTypes = new ArrayList<>();
-
-    @Comment("Document reference number assigned during processing")
-    private String drn;
 
     @Comment("Tax station assigned to handle the application")
     private String station;

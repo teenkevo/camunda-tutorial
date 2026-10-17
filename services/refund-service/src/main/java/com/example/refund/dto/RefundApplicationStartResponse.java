@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 public class RefundApplicationStartResponse {
 
+    private String drn;
     private String processInstanceId;
     private String processDefinitionKey;
 

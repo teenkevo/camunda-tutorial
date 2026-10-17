@@ -15,10 +15,10 @@ app:
       enforce: true
       domains:
         - id: refunds
-          table-prefix: RFND_
+          table-prefix: REFUND_
           services:
             - refund-service
         - id: taxpayer-registration
-          table-prefix: REG_
+          table-prefix: REGISTRATION_
           services:
-            - taxpayer-service
+            - registration-service

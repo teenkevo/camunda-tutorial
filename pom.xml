@@ -17,7 +17,9 @@
     <module>libs/camunda-client</module>
     <module>services/governance-service</module>
     <module>services/refund-service</module>
-    <module>services/taxpayer-service</module>
+    <module>services/registration-service</module>
+    <module>services/document-service</module>
+    <module>services/authority-service</module>
     <module>services/camunda-service</module>
   </modules>
 
