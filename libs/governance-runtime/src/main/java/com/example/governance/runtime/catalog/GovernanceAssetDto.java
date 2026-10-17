@@ -11,7 +11,7 @@ public class GovernanceAssetDto {
     private String fieldName = "";
     private String tableName;
     private String columnName;
-    /** Logical registry asset id from {@code @GovernedAsset}, e.g. {@code refunds.application}. */
+    /** Optional OpenMetadata asset id when linked, e.g. {@code refunds.application}. */
     private String assetId;
     private String classification;
     private String owner;

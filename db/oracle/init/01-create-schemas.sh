@@ -6,7 +6,8 @@ set -euo pipefail
 createAppUser camunda_service     "Camunda_Pass_1"
 createAppUser governance_service  "Governance_Pass_1"
 createAppUser refund_service      "Refund_Pass_1"
-createAppUser taxpayer_service    "Taxpayer_Pass_1"
+createAppUser registration_service "Registration_Pass_1"
+createAppUser document_service     "Document_Pass_1"
 
 # OpenMetadata ingestion user (CREATE SESSION + SELECT_CATALOG_ROLE + SELECT)
 # Full grants also live in db/oracle/03-openmetadata-catalog-user.sql for existing DBs.

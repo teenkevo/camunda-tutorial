@@ -1,6 +1,6 @@
 package com.example.governance.runtime.catalog;
 
-import com.example.governance.annotations.GovernedAsset;
+import com.example.governance.annotations.Domain;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import jakarta.persistence.Entity;
@@ -9,7 +9,7 @@ import org.hibernate.annotations.Comment;
 
 @Entity
 @Table(name = "sample_thing")
-@GovernedAsset("refunds.sample")
+@Domain("refunds")
 @Comment("Sample table")
 class SampleCommentedEntity {
 

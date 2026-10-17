@@ -11,6 +11,8 @@ import com.example.governance.service.dto.GovernanceAssetDto;
 import com.example.governance.service.dto.GovernanceMetadataDto;
 import com.example.governance.service.dto.GovernanceSyncRequest;
 import com.example.governance.service.dto.GovernanceTableMetadataDto;
+import com.example.governance.service.dto.GovernanceValidationDto;
+import com.example.governance.service.entity.GovernanceValidationEntity;
 import com.example.governance.service.openmetadata.OpenMetadataClient;
 import java.util.List;
 import java.util.Optional;
@@ -61,7 +63,7 @@ class GovernanceCatalogServiceTest {
     }
 
     @Test
-    void syncAndConformance_requiresGovernedAssetAndRegistry() {
+    void syncAndConformance_requiresDomainAndNaming() {
         GovernanceAssetDto entity = validRefundEntity();
         entity.setDescription("Refund application business record");
 
@@ -69,10 +71,9 @@ class GovernanceCatalogServiceTest {
         field.setAssetType("FIELD");
         field.setEntityName("com.example.refund.entity.RefundApplicationEntity");
         field.setFieldName("firstName");
-        field.setTableName("RFND_APPL");
+        field.setTableName("REFUND_APPLICATION");
         field.setColumnName("first_name");
         field.setClassification("PII");
-        field.setAssetId("refunds.application");
         field.setDomain("refunds");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity, field)));
@@ -82,29 +83,29 @@ class GovernanceCatalogServiceTest {
 
         List<GovernanceTableMetadataDto> tables = catalogService.listTables("refund-service");
         assertThat(tables).hasSize(1);
-        assertThat(tables.get(0).getAssetId()).isEqualTo("refunds.application");
-        assertThat(tables.get(0).getSteward()).isEqualTo("Refund Data Management");
+        assertThat(tables.get(0).getDomain()).isEqualTo("refunds");
         assertThat(tables.get(0).getColumns()).hasSize(1);
     }
 
     @Test
-    void conformance_failsWhenGovernedAssetMissing() {
+    void conformance_failsWhenDomainMissing() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setAssetId(null);
-        entity.setDomain("refunds");
+        entity.setDomain(null);
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
-        assertThat(report.issues()).anyMatch(i -> "GOVERNED_ASSET_REQUIRED".equals(i.rule()));
+        assertThat(report.issues()).anyMatch(i -> "DOMAIN_REQUIRED".equals(i.rule()));
     }
 
     @Test
-    void conformance_failsWhenRegistryAssetMissing() {
+    void conformance_checksRegistryWhenAssetIdPresent() {
         when(openMetadataClient.fetchAsset("refunds.application")).thenReturn(Optional.empty());
 
-        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(validRefundEntity())));
+        GovernanceAssetDto entity = validRefundEntity();
+        entity.setAssetId("refunds.application");
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
@@ -119,7 +120,9 @@ class GovernanceCatalogServiceTest {
                 )
         ));
 
-        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(validRefundEntity())));
+        GovernanceAssetDto entity = validRefundEntity();
+        entity.setAssetId("refunds.application");
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
         ConformanceReport report = catalogService.conformance("refund-service");
         assertThat(report.compliant()).isFalse();
@@ -129,14 +132,7 @@ class GovernanceCatalogServiceTest {
     @Test
     void conformance_failsWhenDomainNotAllowed() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setAssetId("unknown-domain.thing");
-        entity.setDomain(null);
-
-        when(openMetadataClient.fetchAsset("unknown-domain.thing")).thenReturn(Optional.of(
-                new GovernanceMetadataDto(
-                        "unknown-domain.thing", 1L, "x", "y", "unknown-domain", "PII", "R", null
-                )
-        ));
+        entity.setDomain("unknown-domain");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
@@ -148,7 +144,7 @@ class GovernanceCatalogServiceTest {
     @Test
     void conformance_failsWhenTableNameBreaksConvention() {
         GovernanceAssetDto entity = validRefundEntity();
-        entity.setTableName("refund_application");
+        entity.setTableName("RFND_APPL");
 
         catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(entity)));
 
@@ -157,13 +153,50 @@ class GovernanceCatalogServiceTest {
         assertThat(report.issues()).anyMatch(i -> "TABLE_NAME_CONVENTION".equals(i.rule()));
     }
 
+    @Test
+    void sync_upsertsDiscoveredRequestValidations() {
+        GovernanceValidationDto validation = new GovernanceValidationDto();
+        validation.setValidationId("refund-service.RefundApplicationRequest.firstName.NotBlank");
+        validation.setDtoType("com.example.refund.dto.RefundApplicationRequest");
+        validation.setFieldName("firstName");
+        validation.setConstraintName("NotBlank");
+        validation.setConstraintType("jakarta.validation.constraints.NotBlank");
+        validation.setMessage("firstName is required");
+        validation.setControllerType("com.example.refund.controller.RefundApplicationController");
+        validation.setControllerMethod("start");
+        validation.setHttpMethod("POST");
+        validation.setRequestPath("/api/refund-applications");
+
+        catalogService.sync(new GovernanceSyncRequest(
+                "refund-service",
+                List.of(validRefundEntity()),
+                List.of(validation)
+        ));
+
+        List<GovernanceValidationEntity> listed = catalogService.listValidations("refund-service");
+        assertThat(listed).hasSize(1);
+        assertThat(listed.get(0).getValidationId())
+                .isEqualTo("refund-service.RefundApplicationRequest.firstName.NotBlank");
+        assertThat(listed.get(0).getConstraintName()).isEqualTo("NotBlank");
+
+        validation.setMessage("updated message");
+        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(), List.of(validation)));
+
+        assertThat(catalogService.listValidations("refund-service")).hasSize(1);
+        assertThat(catalogService.findValidation(
+                "refund-service.RefundApplicationRequest.firstName.NotBlank"))
+                .isPresent()
+                .get()
+                .extracting(GovernanceValidationEntity::getMessage)
+                .isEqualTo("updated message");
+    }
+
     private static GovernanceAssetDto validRefundEntity() {
         GovernanceAssetDto entity = new GovernanceAssetDto();
         entity.setAssetType("ENTITY");
         entity.setEntityName("com.example.refund.entity.RefundApplicationEntity");
         entity.setFieldName("");
-        entity.setTableName("RFND_APPL");
-        entity.setAssetId("refunds.application");
+        entity.setTableName("REFUND_APPLICATION");
         entity.setDomain("refunds");
         return entity;
     }

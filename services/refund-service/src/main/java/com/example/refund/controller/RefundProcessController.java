@@ -1,6 +1,5 @@
 package com.example.refund.controller;
 
-import com.example.refund.dto.CreateRefundProcessRequest;
 import com.example.refund.dto.NotifyRefundRequest;
 import com.example.refund.dto.RefundProcessStepResponse;
 import com.example.refund.service.RefundApplicationService;
@@ -11,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Internal APIs invoked by shared Camunda delegates.
+ * Internal APIs invoked by shared Camunda delegates after the document and DRN exist.
  */
 @RestController
 @RequestMapping("/internal/refund-process")
@@ -23,31 +22,26 @@ public class RefundProcessController {
         this.refundApplicationService = refundApplicationService;
     }
 
-    @PostMapping("/create")
-    public RefundProcessStepResponse create(@RequestBody CreateRefundProcessRequest request) {
-        return refundApplicationService.createFromProcess(request);
+    @PostMapping("/{drn}/assign-station")
+    public RefundProcessStepResponse assignStation(@PathVariable("drn") String drn) {
+        return refundApplicationService.assignStation(drn);
     }
 
-    @PostMapping("/{applicationId}/assign-drn-station")
-    public RefundProcessStepResponse assign(@PathVariable("applicationId") String applicationId) {
-        return refundApplicationService.assignDrnAndStation(applicationId);
+    @PostMapping("/{drn}/check-risk")
+    public RefundProcessStepResponse checkRisk(@PathVariable("drn") String drn) {
+        return refundApplicationService.checkRisk(drn);
     }
 
-    @PostMapping("/{applicationId}/check-risk")
-    public RefundProcessStepResponse checkRisk(@PathVariable("applicationId") String applicationId) {
-        return refundApplicationService.checkRisk(applicationId);
+    @PostMapping("/{drn}/auto-approve")
+    public RefundProcessStepResponse autoApprove(@PathVariable("drn") String drn) {
+        return refundApplicationService.autoApprove(drn);
     }
 
-    @PostMapping("/{applicationId}/auto-approve")
-    public RefundProcessStepResponse autoApprove(@PathVariable("applicationId") String applicationId) {
-        return refundApplicationService.autoApprove(applicationId);
-    }
-
-    @PostMapping("/{applicationId}/notify")
+    @PostMapping("/{drn}/notify")
     public RefundProcessStepResponse notifyTaxpayer(
-            @PathVariable("applicationId") String applicationId,
+            @PathVariable("drn") String drn,
             @RequestBody NotifyRefundRequest request
     ) {
-        return refundApplicationService.notifyTaxpayer(applicationId, request);
+        return refundApplicationService.notifyTaxpayer(drn, request);
     }
 }

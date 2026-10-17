@@ -26,28 +26,43 @@ logging:
 # Allow-listed data domains and physical table naming. Entities outside this fail conformance.
 app:
   governance:
+    catalog:
+      service-name: governance-service
+      base-url: ${GOVERNANCE_URL:http://localhost:8081}
+      # Self-publish identity + apply Oracle COMMENT ON from @Comment
+      publish-on-startup: true
+      fail-on-error: false
+      fail-on-non-compliant: false
+      scan-packages: com.example.governance.service
     naming:
       enforce: true
       domains:
         - id: refunds
           label: Refunds
-          table-prefix: RFND_
+          table-prefix: REFUND_
           services:
             - refund-service
         - id: taxpayer-registration
           label: Taxpayer registration
-          table-prefix: REG_
-          table-pattern: "^REG_[A-Z0-9_]+$"
+          table-prefix: REGISTRATION_
+          table-pattern: "^REGISTRATION_[A-Z0-9_]+$"
           services:
-            - taxpayer-service
+            - registration-service
         - id: governance
           label: Governance catalog
-          table-prefix: GOV_
+          table-prefix: GOVERNANCE_
           services:
             - governance-service
+        - id: documents
+          label: Documents
+          table-prefix: DOCUMENT_
+          table-pattern: "^DOCUMENT_[A-Z0-9_]+$"
+          services:
+            - document-service
     openmetadata:
       enabled: true
-      require-registry-attributes: true
+      # Only enforced when an assetId is present on a synced entity row
+      require-registry-attributes: false
       base-url: ${OPENMETADATA_API_URL:http://localhost:8585/api}
       username: ${OPENMETADATA_USER:admin}
       password: ${OPENMETADATA_PASSWORD:admin}
@@ -56,4 +71,5 @@ app:
       seed: false
       service-refresh-urls:
         refund-service: http://localhost:8082
-        taxpayer-service: http://localhost:8083
+        registration-service: http://localhost:8083
+        document-service: http://localhost:8085

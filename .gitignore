@@ -32,8 +32,5 @@ bin/
 ### Maven ###
 target/
 
-# local data directories
+# local data directories (legacy)
 data/
-
-# local start-all logs/pids
-.logs/

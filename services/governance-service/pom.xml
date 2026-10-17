@@ -21,6 +21,10 @@
       <artifactId>governance-annotations</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.example</groupId>
+      <artifactId>governance-runtime</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>

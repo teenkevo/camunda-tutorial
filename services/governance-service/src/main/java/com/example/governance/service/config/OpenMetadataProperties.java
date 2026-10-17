@@ -49,7 +49,8 @@ public class OpenMetadataProperties {
     private static Map<String, String> defaultRefreshUrls() {
         Map<String, String> map = new LinkedHashMap<>();
         map.put("refund-service", "http://localhost:8082");
-        map.put("taxpayer-service", "http://localhost:8083");
+        map.put("registration-service", "http://localhost:8083");
+        map.put("document-service", "http://localhost:8085");
         return map;
     }
 

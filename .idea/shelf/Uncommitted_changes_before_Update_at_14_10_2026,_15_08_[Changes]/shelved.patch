@@ -1,0 +1,962 @@
+Index: services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.taxpayer.dto;\n\nimport com.example.governance.annotations.Sensitive;\nimport com.example.governance.annotations.SensitiveType;\nimport com.example.governance.runtime.SensitivitySupport;\nimport java.util.List;\nimport lombok.Data;\n\n@Data\npublic class TaxpayerRegistrationRequest {\n\n    @Sensitive(SensitiveType.PII)\n    private String taxpayerName;\n\n    @Sensitive(SensitiveType.PII)\n    private String nationalId;\n\n    private List<String> taxTypes;\n\n    @Override\n    public String toString() {\n        return SensitivitySupport.sensitiveToString(this);\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java b/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java
+--- a/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/taxpayer-service/src/main/java/com/example/taxpayer/dto/TaxpayerRegistrationRequest.java	(date 1791977430396)
+@@ -4,14 +4,16 @@
+ import com.example.governance.annotations.SensitiveType;
+ import com.example.governance.runtime.SensitivitySupport;
+ import java.util.List;
++
++import jakarta.validation.constraints.NotBlank;
+ import lombok.Data;
+ 
+ @Data
+ public class TaxpayerRegistrationRequest {
+-
+     @Sensitive(SensitiveType.PII)
+     private String taxpayerName;
+ 
++    @NotBlank(message = "National ID cannot be empty")
+     @Sensitive(SensitiveType.PII)
+     private String nationalId;
+ 
+Index: services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.entity;\n\nimport com.example.governance.annotations.GovernedAsset;\nimport com.example.governance.annotations.Sensitive;\nimport com.example.governance.annotations.SensitiveType;\nimport com.example.governance.runtime.SensitivitySupport;\nimport jakarta.persistence.Column;\nimport jakarta.persistence.Entity;\nimport jakarta.persistence.GeneratedValue;\nimport jakarta.persistence.GenerationType;\nimport jakarta.persistence.Id;\nimport jakarta.persistence.Table;\nimport java.time.Instant;\nimport lombok.Data;\nimport org.hibernate.annotations.Comment;\n\n@Data\n@Entity\n@Table(name = \"RFND_APPL\")\n@GovernedAsset(\"refunds.application\")\n@Comment(\"Refund application business record\")\npublic class RefundApplicationEntity {\n\n    @Id\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    @Comment(\"Surrogate primary key\")\n    private Long id;\n\n    @Column(nullable = false, unique = true)\n    @Comment(\"Business identifier for the refund application\")\n    private String applicationId;\n\n    @Comment(\"Camunda process instance id that owns this application\")\n    private String processInstanceId;\n\n    @Sensitive(SensitiveType.PII)\n    @Comment(\"Taxpayer given name\")\n    private String firstName;\n\n    @Sensitive(SensitiveType.PII)\n    @Comment(\"Taxpayer family name\")\n    private String lastName;\n\n    @Comment(\"Document reference number assigned during processing\")\n    private String drn;\n\n    @Comment(\"Tax station assigned to handle the application\")\n    private String station;\n\n    @Comment(\"Computed taxpayer risk level (low, medium, high)\")\n    private String riskLevel;\n\n    @Comment(\"Whether the refund was approved\")\n    private Boolean approved;\n\n    @Comment(\"Lifecycle status of the application\")\n    private String status;\n\n    @Sensitive(SensitiveType.PII)\n    @Comment(\"Reviewer or auto-approval comment\")\n    private String reviewComment;\n\n    @Sensitive(SensitiveType.PII)\n    @Column(length = 1000)\n    @Comment(\"Notification message sent to the taxpayer\")\n    private String notificationMessage;\n\n    @Comment(\"Final decision outcome (APPROVED or REJECTED)\")\n    private String decision;\n\n    @Comment(\"When the application record was created\")\n    private Instant createdAt;\n\n    @Comment(\"When the application record was last updated\")\n    private Instant updatedAt;\n\n    @Override\n    public String toString() {\n        return SensitivitySupport.sensitiveToString(this);\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java b/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java
+--- a/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/entity/RefundApplicationEntity.java	(date 1791970874501)
+@@ -4,13 +4,17 @@
+ import com.example.governance.annotations.Sensitive;
+ import com.example.governance.annotations.SensitiveType;
+ import com.example.governance.runtime.SensitivitySupport;
++import com.example.refund.persistence.StringListConverter;
+ import jakarta.persistence.Column;
++import jakarta.persistence.Convert;
+ import jakarta.persistence.Entity;
+ import jakarta.persistence.GeneratedValue;
+ import jakarta.persistence.GenerationType;
+ import jakarta.persistence.Id;
+ import jakarta.persistence.Table;
+ import java.time.Instant;
++import java.util.ArrayList;
++import java.util.List;
+ import lombok.Data;
+ import org.hibernate.annotations.Comment;
+ 
+@@ -41,6 +45,11 @@
+     @Comment("Taxpayer family name")
+     private String lastName;
+ 
++    @Convert(converter = StringListConverter.class)
++    @Column(name = "tax_types", length = 120)
++    @Comment("Tax types claimed on the refund (VAT, PAYE, CIT, WHT)")
++    private List<String> taxTypes = new ArrayList<>();
++
+     @Comment("Document reference number assigned during processing")
+     private String drn;
+ 
+Index: services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationRequest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.dto;\n\nimport com.example.governance.annotations.Sensitive;\nimport com.example.governance.annotations.SensitiveType;\nimport com.example.governance.runtime.SensitivitySupport;\nimport lombok.Data;\n\n@Data\npublic class RefundApplicationRequest {\n\n    @Sensitive(SensitiveType.PII)\n    private String firstName;\n\n    @Sensitive(SensitiveType.PII)\n    private String lastName;\n\n    @Override\n    public String toString() {\n        return SensitivitySupport.sensitiveToString(this);\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationRequest.java b/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationRequest.java
+--- a/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationRequest.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationRequest.java	(date 1791970868698)
+@@ -3,17 +3,27 @@
+ import com.example.governance.annotations.Sensitive;
+ import com.example.governance.annotations.SensitiveType;
+ import com.example.governance.runtime.SensitivitySupport;
++import com.example.refund.validation.SupportedTaxTypes;
++import jakarta.validation.constraints.NotBlank;
++import jakarta.validation.constraints.NotEmpty;
++import java.util.List;
+ import lombok.Data;
+ 
+ @Data
+ public class RefundApplicationRequest {
+ 
++    @NotBlank(message = "firstName is required")
+     @Sensitive(SensitiveType.PII)
+     private String firstName;
+ 
++    @NotBlank(message = "lastName is required")
+     @Sensitive(SensitiveType.PII)
+     private String lastName;
+ 
++    @NotEmpty(message = "At least one tax type is required")
++    @SupportedTaxTypes
++    private List<String> taxTypes;
++
+     @Override
+     public String toString() {
+         return SensitivitySupport.sensitiveToString(this);
+Index: services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.controller;\n\nimport com.example.camunda.client.CamundaProcessClient;\nimport com.example.refund.dto.RefundApplicationRequest;\nimport com.example.refund.dto.RefundApplicationResponse;\nimport com.example.refund.dto.RefundApplicationStartResponse;\nimport com.example.refund.mapper.RefundApplicationMapper;\nimport com.example.refund.service.RefundApplicationService;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestBody;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.ResponseStatus;\nimport org.springframework.web.bind.annotation.RestController;\nimport org.springframework.web.server.ResponseStatusException;\n\n@RestController\n@RequestMapping(\"/api/refund-applications\")\npublic class RefundApplicationController {\n\n    private final CamundaProcessClient camundaProcessClient;\n    private final RefundApplicationService refundApplicationService;\n    private final RefundApplicationMapper refundApplicationMapper;\n\n    public RefundApplicationController(\n            CamundaProcessClient camundaProcessClient,\n            RefundApplicationService refundApplicationService,\n            RefundApplicationMapper refundApplicationMapper\n    ) {\n        this.camundaProcessClient = camundaProcessClient;\n        this.refundApplicationService = refundApplicationService;\n        this.refundApplicationMapper = refundApplicationMapper;\n    }\n\n    @PostMapping\n    @ResponseStatus(HttpStatus.CREATED)\n    public RefundApplicationStartResponse start(@RequestBody RefundApplicationRequest request) {\n        if (request.getFirstName() == null || request.getFirstName().isBlank()) {\n            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, \"firstName is required\");\n        }\n        if (request.getLastName() == null || request.getLastName().isBlank()) {\n            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, \"lastName is required\");\n        }\n\n        String firstName = request.getFirstName().trim();\n        String lastName = request.getLastName().trim();\n\n        Map<String, Object> variables = new HashMap<>();\n        variables.put(\"firstName\", firstName);\n        variables.put(\"lastName\", lastName);\n        variables.put(\"taxpayerName\", firstName + \" \" + lastName);\n\n        String processInstanceId = camundaProcessClient.startProcess(\"refund-application\", variables);\n\n        RefundApplicationStartResponse response = new RefundApplicationStartResponse();\n        response.setProcessInstanceId(processInstanceId);\n        response.setProcessDefinitionKey(\"refund-application\");\n        response.setFirstName(firstName);\n        response.setLastName(lastName);\n        response.setMessage(\"Process started on shared Camunda. Query /api/refund-applications for DB state.\");\n        return response;\n    }\n\n    @GetMapping\n    public List<RefundApplicationResponse> list() {\n        return refundApplicationMapper.toResponseList(refundApplicationService.findAll());\n    }\n\n    @GetMapping(\"/{applicationId}\")\n    public RefundApplicationResponse get(@PathVariable(\"applicationId\") String applicationId) {\n        return refundApplicationMapper.toResponse(refundApplicationService.getByApplicationId(applicationId));\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java b/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java
+--- a/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/controller/RefundApplicationController.java	(date 1791977458440)
+@@ -6,9 +6,13 @@
+ import com.example.refund.dto.RefundApplicationStartResponse;
+ import com.example.refund.mapper.RefundApplicationMapper;
+ import com.example.refund.service.RefundApplicationService;
++import jakarta.validation.Valid;
+ import java.util.HashMap;
++import java.util.LinkedHashSet;
+ import java.util.List;
++import java.util.Locale;
+ import java.util.Map;
++import java.util.stream.Collectors;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.web.bind.annotation.GetMapping;
+ import org.springframework.web.bind.annotation.PathVariable;
+@@ -17,7 +21,6 @@
+ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.bind.annotation.ResponseStatus;
+ import org.springframework.web.bind.annotation.RestController;
+-import org.springframework.web.server.ResponseStatusException;
+ 
+ @RestController
+ @RequestMapping("/api/refund-applications")
+@@ -39,21 +42,16 @@
+ 
+     @PostMapping
+     @ResponseStatus(HttpStatus.CREATED)
+-    public RefundApplicationStartResponse start(@RequestBody RefundApplicationRequest request) {
+-        if (request.getFirstName() == null || request.getFirstName().isBlank()) {
+-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "firstName is required");
+-        }
+-        if (request.getLastName() == null || request.getLastName().isBlank()) {
+-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "lastName is required");
+-        }
+-
++    public RefundApplicationStartResponse start(@Valid @RequestBody RefundApplicationRequest request) {
+         String firstName = request.getFirstName().trim();
+         String lastName = request.getLastName().trim();
++        List<String> taxTypes = normalizeTaxTypes(request.getTaxTypes());
+ 
+         Map<String, Object> variables = new HashMap<>();
+         variables.put("firstName", firstName);
+         variables.put("lastName", lastName);
+         variables.put("taxpayerName", firstName + " " + lastName);
++        variables.put("taxTypes", taxTypes);
+ 
+         String processInstanceId = camundaProcessClient.startProcess("refund-application", variables);
+ 
+@@ -62,6 +60,7 @@
+         response.setProcessDefinitionKey("refund-application");
+         response.setFirstName(firstName);
+         response.setLastName(lastName);
++        response.setTaxTypes(taxTypes);
+         response.setMessage("Process started on shared Camunda. Query /api/refund-applications for DB state.");
+         return response;
+     }
+@@ -75,4 +74,18 @@
+     public RefundApplicationResponse get(@PathVariable("applicationId") String applicationId) {
+         return refundApplicationMapper.toResponse(refundApplicationService.getByApplicationId(applicationId));
+     }
++
++    private static List<String> normalizeTaxTypes(List<String> raw) {
++        if (raw == null) {
++            return List.of();
++        }
++        return raw.stream()
++                .map(String::trim)
++                .filter(s -> !s.isEmpty())
++                .map(s -> s.toUpperCase(Locale.ROOT))
++                .collect(Collectors.collectingAndThen(
++                        Collectors.toCollection(LinkedHashSet::new),
++                        List::copyOf
++                ));
++    }
+ }
+Index: services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.camunda.delegate.refund;\n\nimport com.example.camunda.client.DomainServiceClient;\nimport java.util.HashMap;\nimport java.util.Map;\nimport org.camunda.bpm.engine.delegate.DelegateExecution;\nimport org.camunda.bpm.engine.delegate.JavaDelegate;\nimport org.springframework.stereotype.Component;\n\n@Component(\"createApplicationDelegate\")\npublic class CreateApplicationDelegate implements JavaDelegate {\n\n    private final DomainServiceClient domainServiceClient;\n\n    public CreateApplicationDelegate(DomainServiceClient domainServiceClient) {\n        this.domainServiceClient = domainServiceClient;\n    }\n\n    @Override\n    public void execute(DelegateExecution execution) {\n        Map<String, Object> body = new HashMap<>();\n        body.put(\"processInstanceId\", execution.getProcessInstanceId());\n        body.put(\"firstName\", execution.getVariable(\"firstName\"));\n        body.put(\"lastName\", execution.getVariable(\"lastName\"));\n\n        Map<?, ?> result = domainServiceClient.postRefund(\"/internal/refund-process/create\", body);\n        execution.setVariable(\"applicationId\", result.get(\"applicationId\"));\n        execution.setVariable(\"applicationStatus\", result.get(\"applicationStatus\"));\n        execution.setVariable(\"createdAt\", result.get(\"createdAt\"));\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java b/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java
+--- a/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/camunda-service/src/main/java/com/example/camunda/delegate/refund/CreateApplicationDelegate.java	(date 1791970907436)
+@@ -22,10 +22,14 @@
+         body.put("processInstanceId", execution.getProcessInstanceId());
+         body.put("firstName", execution.getVariable("firstName"));
+         body.put("lastName", execution.getVariable("lastName"));
++        body.put("taxTypes", execution.getVariable("taxTypes"));
+ 
+         Map<?, ?> result = domainServiceClient.postRefund("/internal/refund-process/create", body);
+         execution.setVariable("applicationId", result.get("applicationId"));
+         execution.setVariable("applicationStatus", result.get("applicationStatus"));
+         execution.setVariable("createdAt", result.get("createdAt"));
++        if (result.get("taxTypes") != null) {
++            execution.setVariable("taxTypes", result.get("taxTypes"));
++        }
+     }
+ }
+Index: libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataPublisher.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.governance.runtime.catalog;\n\nimport java.util.LinkedHashSet;\nimport java.util.List;\nimport java.util.Set;\nimport org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\nimport org.springframework.boot.ApplicationArguments;\nimport org.springframework.boot.ApplicationRunner;\nimport org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\nimport org.springframework.core.env.Environment;\nimport org.springframework.stereotype.Component;\n\n/**\n * On startup, publishes local entity governance metadata to the governance microservice\n * and optionally verifies conformance.\n */\n@Component\n@ConditionalOnProperty(prefix = \"app.governance.catalog\", name = \"publish-on-startup\", havingValue = \"true\", matchIfMissing = true)\npublic class GovernanceMetadataPublisher implements ApplicationRunner {\n\n    private static final Logger log = LoggerFactory.getLogger(GovernanceMetadataPublisher.class);\n\n    private final GovernanceCatalogProperties properties;\n    private final GovernanceMetadataScanner scanner;\n    private final GovernanceCatalogClient client;\n    private final Environment environment;\n\n    public GovernanceMetadataPublisher(\n            GovernanceCatalogProperties properties,\n            GovernanceMetadataScanner scanner,\n            GovernanceCatalogClient client,\n            Environment environment\n    ) {\n        this.properties = properties;\n        this.scanner = scanner;\n        this.client = client;\n        this.environment = environment;\n    }\n\n    @Override\n    public void run(ApplicationArguments args) {\n        String serviceName = properties.getServiceName();\n        Set<String> packages = scanPackages();\n        List<GovernanceAssetDto> assets = scanner.scan(serviceName, packages);\n        if (assets.isEmpty()) {\n            log.info(\"No governance-annotated entities found in {}\", packages);\n            return;\n        }\n\n        client.syncSafe(new GovernanceSyncRequest(serviceName, assets));\n\n        try {\n            ConformanceReport report = client.conformance(serviceName);\n            if (report.compliant()) {\n                log.info(\"Governance conformance OK for {}\", serviceName);\n            } else {\n                log.warn(\"Governance conformance FAILED for {}: {}\", serviceName, report.issues());\n                if (properties.isFailOnNonCompliant()) {\n                    throw new IllegalStateException(\n                            \"Governance conformance failed for \" + serviceName + \": \" + report.issues()\n                    );\n                }\n            }\n        } catch (RuntimeException ex) {\n            if (ex instanceof IllegalStateException && properties.isFailOnNonCompliant()) {\n                throw ex;\n            }\n            if (properties.isFailOnError()) {\n                throw ex;\n            }\n            log.warn(\"Governance conformance check skipped/failed: {}\", ex.getMessage());\n        }\n    }\n\n    private Set<String> scanPackages() {\n        Set<String> packages = new LinkedHashSet<>();\n        String configured = environment.getProperty(\"app.governance.catalog.scan-packages\");\n        if (configured != null && !configured.isBlank()) {\n            for (String p : configured.split(\",\")) {\n                if (!p.isBlank()) {\n                    packages.add(p.trim());\n                }\n            }\n            return packages;\n        }\n        packages.add(\"com.example\");\n        return packages;\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataPublisher.java b/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataPublisher.java
+--- a/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataPublisher.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceMetadataPublisher.java	(date 1791956254810)
+@@ -23,17 +23,20 @@
+ 
+     private final GovernanceCatalogProperties properties;
+     private final GovernanceMetadataScanner scanner;
++    private final GovernanceRequestValidationScanner validationScanner;
+     private final GovernanceCatalogClient client;
+     private final Environment environment;
+ 
+     public GovernanceMetadataPublisher(
+             GovernanceCatalogProperties properties,
+             GovernanceMetadataScanner scanner,
++            GovernanceRequestValidationScanner validationScanner,
+             GovernanceCatalogClient client,
+             Environment environment
+     ) {
+         this.properties = properties;
+         this.scanner = scanner;
++        this.validationScanner = validationScanner;
+         this.client = client;
+         this.environment = environment;
+     }
+@@ -43,12 +46,19 @@
+         String serviceName = properties.getServiceName();
+         Set<String> packages = scanPackages();
+         List<GovernanceAssetDto> assets = scanner.scan(serviceName, packages);
+-        if (assets.isEmpty()) {
+-            log.info("No governance-annotated entities found in {}", packages);
++        List<GovernanceValidationDto> validations = validationScanner.scan(serviceName, packages);
++        if (assets.isEmpty() && validations.isEmpty()) {
++            log.info("No governance assets or request validations found in {}", packages);
+             return;
+         }
++        log.info(
++                "Publishing {} assets and {} request validations for {}",
++                assets.size(),
++                validations.size(),
++                serviceName
++        );
+ 
+-        client.syncSafe(new GovernanceSyncRequest(serviceName, assets));
++        client.syncSafe(new GovernanceSyncRequest(serviceName, assets, validations));
+ 
+         try {
+             ConformanceReport report = client.conformance(serviceName);
+Index: libs/governance-runtime/pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n  <modelVersion>4.0.0</modelVersion>\n\n  <parent>\n    <groupId>com.example</groupId>\n    <artifactId>camunda-tutorial</artifactId>\n    <version>0.0.1-SNAPSHOT</version>\n    <relativePath>../../pom.xml</relativePath>\n  </parent>\n\n  <artifactId>governance-runtime</artifactId>\n  <name>governance-runtime</name>\n  <description>Runtime PII protection and governance catalog publisher for domain microservices</description>\n\n  <dependencies>\n    <dependency>\n      <groupId>com.example</groupId>\n      <artifactId>governance-annotations</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-web</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-data-jpa</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-autoconfigure</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>org.projectlombok</groupId>\n      <artifactId>lombok</artifactId>\n      <version>${lombok.version}</version>\n      <optional>true</optional>\n    </dependency>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-test</artifactId>\n      <scope>test</scope>\n    </dependency>\n  </dependencies>\n\n  <build>\n    <plugins>\n      <plugin>\n        <groupId>org.apache.maven.plugins</groupId>\n        <artifactId>maven-compiler-plugin</artifactId>\n        <configuration>\n          <annotationProcessorPaths>\n            <path>\n              <groupId>org.projectlombok</groupId>\n              <artifactId>lombok</artifactId>\n              <version>${lombok.version}</version>\n            </path>\n          </annotationProcessorPaths>\n        </configuration>\n      </plugin>\n    </plugins>\n  </build>\n</project>\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/libs/governance-runtime/pom.xml b/libs/governance-runtime/pom.xml
+--- a/libs/governance-runtime/pom.xml	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/libs/governance-runtime/pom.xml	(date 1791956154221)
+@@ -26,6 +26,10 @@
+     </dependency>
+     <dependency>
+       <groupId>org.springframework.boot</groupId>
++      <artifactId>spring-boot-starter-validation</artifactId>
++    </dependency>
++    <dependency>
++      <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-data-jpa</artifactId>
+     </dependency>
+     <dependency>
+Index: libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogClient.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.governance.runtime.catalog;\n\nimport java.util.Arrays;\nimport java.util.List;\nimport org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\nimport org.springframework.boot.web.client.RestTemplateBuilder;\nimport org.springframework.stereotype.Component;\nimport org.springframework.web.client.RestClientException;\nimport org.springframework.web.client.RestTemplate;\nimport org.springframework.web.util.UriComponentsBuilder;\n\n@Component\npublic class GovernanceCatalogClient {\n\n    private static final Logger log = LoggerFactory.getLogger(GovernanceCatalogClient.class);\n\n    private final RestTemplate restTemplate;\n    private final GovernanceCatalogProperties properties;\n\n    public GovernanceCatalogClient(RestTemplateBuilder builder, GovernanceCatalogProperties properties) {\n        this.restTemplate = builder.build();\n        this.properties = properties;\n    }\n\n    public void sync(GovernanceSyncRequest request) {\n        String url = trimSlash(properties.getBaseUrl()) + \"/api/governance/sync\";\n        restTemplate.postForObject(url, request, GovernanceAssetDto[].class);\n        log.info(\"Published {} governance assets for service {}\",\n                request.assets() == null ? 0 : request.assets().size(),\n                request.serviceName());\n    }\n\n    public ConformanceReport conformance(String serviceName) {\n        String url = UriComponentsBuilder\n                .fromHttpUrl(trimSlash(properties.getBaseUrl()) + \"/api/governance/conformance\")\n                .queryParam(\"service\", serviceName)\n                .toUriString();\n        ConformanceReport report = restTemplate.getForObject(url, ConformanceReport.class);\n        if (report == null) {\n            throw new IllegalStateException(\"Empty conformance response from governance-service\");\n        }\n        return report;\n    }\n\n    public List<GovernanceAssetDto> list(String serviceName) {\n        String url = UriComponentsBuilder\n                .fromHttpUrl(trimSlash(properties.getBaseUrl()) + \"/api/governance/assets\")\n                .queryParam(\"service\", serviceName)\n                .toUriString();\n        GovernanceAssetDto[] body = restTemplate.getForObject(url, GovernanceAssetDto[].class);\n        return body == null ? List.of() : Arrays.asList(body);\n    }\n\n    public void syncSafe(GovernanceSyncRequest request) {\n        try {\n            sync(request);\n        } catch (RestClientException ex) {\n            if (properties.isFailOnError()) {\n                throw ex;\n            }\n            log.warn(\"Governance catalog sync failed (continuing): {}\", ex.getMessage());\n        }\n    }\n\n    private static String trimSlash(String baseUrl) {\n        if (baseUrl == null || baseUrl.isBlank()) {\n            return \"http://localhost:8081\";\n        }\n        return baseUrl.endsWith(\"/\") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogClient.java b/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogClient.java
+--- a/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogClient.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceCatalogClient.java	(date 1791956652793)
+@@ -26,11 +26,21 @@
+     public void sync(GovernanceSyncRequest request) {
+         String url = trimSlash(properties.getBaseUrl()) + "/api/governance/sync";
+         restTemplate.postForObject(url, request, GovernanceAssetDto[].class);
+-        log.info("Published {} governance assets for service {}",
++        log.info("Published {} governance assets and {} validations for service {}",
+                 request.assets() == null ? 0 : request.assets().size(),
++                request.validations() == null ? 0 : request.validations().size(),
+                 request.serviceName());
+     }
+ 
++    public List<GovernanceValidationDto> listValidations(String serviceName) {
++        String url = UriComponentsBuilder
++                .fromHttpUrl(trimSlash(properties.getBaseUrl()) + "/api/governance/validations")
++                .queryParam("service", serviceName)
++                .toUriString();
++        GovernanceValidationDto[] body = restTemplate.getForObject(url, GovernanceValidationDto[].class);
++        return body == null ? List.of() : Arrays.asList(body);
++    }
++
+     public ConformanceReport conformance(String serviceName) {
+         String url = UriComponentsBuilder
+                 .fromHttpUrl(trimSlash(properties.getBaseUrl()) + "/api/governance/conformance")
+Index: services/governance-service/src/main/java/com/example/governance/service/controller/GovernanceCatalogController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.governance.service.controller;\n\nimport com.example.governance.service.config.GovernanceDomainNamingRule;\nimport com.example.governance.service.config.GovernanceNamingProperties;\nimport com.example.governance.service.dto.ConformanceReport;\nimport com.example.governance.service.dto.GovernanceAssetDto;\nimport com.example.governance.service.dto.GovernanceDomainNamingDto;\nimport com.example.governance.service.dto.GovernanceMetadataDto;\nimport com.example.governance.service.dto.GovernanceSyncRequest;\nimport com.example.governance.service.dto.GovernanceTableMetadataDto;\nimport com.example.governance.service.entity.GovernanceAssetEntity;\nimport com.example.governance.service.service.GovernanceCatalogService;\nimport java.util.List;\nimport java.util.Map;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestBody;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RequestParam;\nimport org.springframework.web.bind.annotation.ResponseStatus;\nimport org.springframework.web.bind.annotation.RestController;\nimport org.springframework.web.server.ResponseStatusException;\n\n@RestController\n@RequestMapping(\"/api/governance\")\npublic class GovernanceCatalogController {\n\n    private final GovernanceCatalogService catalogService;\n    private final GovernanceNamingProperties namingProperties;\n\n    public GovernanceCatalogController(\n            GovernanceCatalogService catalogService,\n            GovernanceNamingProperties namingProperties\n    ) {\n        this.catalogService = catalogService;\n        this.namingProperties = namingProperties;\n    }\n\n    @PostMapping(\"/sync\")\n    @ResponseStatus(HttpStatus.ACCEPTED)\n    public List<GovernanceAssetDto> sync(@RequestBody GovernanceSyncRequest request) {\n        try {\n            return catalogService.sync(request).stream().map(this::toDto).toList();\n        } catch (IllegalArgumentException ex) {\n            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());\n        }\n    }\n\n    @GetMapping(\"/assets\")\n    public List<GovernanceAssetDto> assets(@RequestParam(value = \"service\", required = false) String service) {\n        return catalogService.list(service).stream().map(this::toDto).toList();\n    }\n\n    /** Authoritative registry metadata for a logical asset id (OpenMetadata-backed). */\n    @GetMapping(\"/assets/{assetId:.+}\")\n    public GovernanceMetadataDto assetById(@PathVariable(\"assetId\") String assetId) {\n        try {\n            return catalogService.resolveAsset(assetId);\n        } catch (IllegalArgumentException ex) {\n            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());\n        }\n    }\n\n    @GetMapping(\"/tables\")\n    public List<GovernanceTableMetadataDto> tables(@RequestParam(value = \"service\", required = false) String service) {\n        return catalogService.listTables(service);\n    }\n\n    @GetMapping(\"/conformance\")\n    public ConformanceReport conformance(@RequestParam(\"service\") String service) {\n        try {\n            return catalogService.conformance(service);\n        } catch (IllegalArgumentException ex) {\n            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());\n        }\n    }\n\n    @GetMapping(\"/naming-domains\")\n    public List<GovernanceDomainNamingDto> namingDomains() {\n        return namingProperties.getDomains().stream().map(this::toNamingDto).toList();\n    }\n\n    /**\n     * OpenMetadata alert / generic webhook destination. Accepts flexible JSON and\n     * extracts an asset id from common fields, then fans out cache refresh.\n     */\n    @PostMapping(\"/webhooks/openmetadata\")\n    @ResponseStatus(HttpStatus.ACCEPTED)\n    public Map<String, Object> openMetadataWebhook(@RequestBody Map<String, Object> payload) {\n        String assetId = extractAssetId(payload);\n        if (assetId != null) {\n            catalogService.onRegistryAssetUpdated(assetId);\n        }\n        return Map.of(\n                \"accepted\", true,\n                \"assetId\", assetId == null ? \"\" : assetId\n        );\n    }\n\n    @SuppressWarnings(\"unchecked\")\n    private static String extractAssetId(Map<String, Object> payload) {\n        if (payload == null) {\n            return null;\n        }\n        for (String key : List.of(\"assetId\", \"asset_id\", \"fullyQualifiedName\", \"displayName\", \"name\")) {\n            Object v = payload.get(key);\n            if (v != null && !String.valueOf(v).isBlank()) {\n                return normalizePossibleFqn(String.valueOf(v));\n            }\n        }\n        Object entity = payload.get(\"entity\");\n        if (entity instanceof Map<?, ?> map) {\n            Object displayName = map.get(\"displayName\");\n            if (displayName != null && !String.valueOf(displayName).isBlank()) {\n                return normalizePossibleFqn(String.valueOf(displayName));\n            }\n            Object fqn = map.get(\"fullyQualifiedName\");\n            if (fqn != null && !String.valueOf(fqn).isBlank()) {\n                return normalizePossibleFqn(String.valueOf(fqn));\n            }\n        }\n        Object change = payload.get(\"changeEvent\");\n        if (change instanceof Map<?, ?> changeMap) {\n            Object entityFqn = changeMap.get(\"entityFullyQualifiedName\");\n            if (entityFqn != null) {\n                return normalizePossibleFqn(String.valueOf(entityFqn));\n            }\n        }\n        return null;\n    }\n\n    private static String normalizePossibleFqn(String raw) {\n        String value = raw.trim();\n        // GovernedAssets.refunds_application → refunds.application\n        if (value.contains(\".\")) {\n            String after = value.substring(value.indexOf('.') + 1);\n            if (after.contains(\"_\") && !after.contains(\".\")) {\n                int idx = after.indexOf('_');\n                return after.substring(0, idx) + \".\" + after.substring(idx + 1);\n            }\n            if (value.chars().filter(ch -> ch == '.').count() == 1 && !value.startsWith(\"GovernedAssets\")) {\n                return value;\n            }\n        }\n        if (value.contains(\"_\") && !value.contains(\".\")) {\n            int idx = value.indexOf('_');\n            return value.substring(0, idx) + \".\" + value.substring(idx + 1);\n        }\n        return value;\n    }\n\n    private GovernanceDomainNamingDto toNamingDto(GovernanceDomainNamingRule rule) {\n        GovernanceDomainNamingDto dto = new GovernanceDomainNamingDto();\n        dto.setId(rule.getId());\n        dto.setLabel(rule.getLabel());\n        dto.setTablePrefix(rule.getTablePrefix());\n        dto.setTablePattern(GovernanceCatalogService.resolveTablePattern(rule));\n        dto.setServices(rule.getServices());\n        return dto;\n    }\n\n    private GovernanceAssetDto toDto(GovernanceAssetEntity entity) {\n        GovernanceAssetDto dto = new GovernanceAssetDto();\n        dto.setServiceName(entity.getServiceName());\n        dto.setAssetType(entity.getAssetType());\n        dto.setEntityName(entity.getEntityName());\n        dto.setFieldName(GovernanceCatalogService.toApiFieldName(entity.getFieldName()));\n        dto.setTableName(entity.getTableName());\n        dto.setColumnName(entity.getColumnName());\n        dto.setAssetId(entity.getAssetId());\n        dto.setClassification(entity.getClassification());\n        dto.setOwner(entity.getOwner());\n        dto.setSteward(entity.getSteward());\n        dto.setDomain(entity.getDomain());\n        dto.setRetentionPolicy(entity.getRetentionPolicy());\n        dto.setDescription(entity.getDescription());\n        dto.setMetadataVersion(entity.getMetadataVersion());\n        return dto;\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/governance-service/src/main/java/com/example/governance/service/controller/GovernanceCatalogController.java b/services/governance-service/src/main/java/com/example/governance/service/controller/GovernanceCatalogController.java
+--- a/services/governance-service/src/main/java/com/example/governance/service/controller/GovernanceCatalogController.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/governance-service/src/main/java/com/example/governance/service/controller/GovernanceCatalogController.java	(date 1791956649768)
+@@ -8,7 +8,9 @@
+ import com.example.governance.service.dto.GovernanceMetadataDto;
+ import com.example.governance.service.dto.GovernanceSyncRequest;
+ import com.example.governance.service.dto.GovernanceTableMetadataDto;
++import com.example.governance.service.dto.GovernanceValidationDto;
+ import com.example.governance.service.entity.GovernanceAssetEntity;
++import com.example.governance.service.entity.GovernanceValidationEntity;
+ import com.example.governance.service.service.GovernanceCatalogService;
+ import java.util.List;
+ import java.util.Map;
+@@ -68,6 +70,21 @@
+         return catalogService.listTables(service);
+     }
+ 
++    @GetMapping("/validations")
++    public List<GovernanceValidationDto> validations(
++            @RequestParam(value = "service", required = false) String service
++    ) {
++        return catalogService.listValidations(service).stream().map(this::toValidationDto).toList();
++    }
++
++    @GetMapping("/validations/{validationId:.+}")
++    public GovernanceValidationDto validationById(@PathVariable("validationId") String validationId) {
++        return catalogService.findValidation(validationId)
++                .map(this::toValidationDto)
++                .orElseThrow(() -> new ResponseStatusException(
++                        HttpStatus.NOT_FOUND, "Unknown validation: " + validationId));
++    }
++
+     @GetMapping("/conformance")
+     public ConformanceReport conformance(@RequestParam("service") String service) {
+         try {
+@@ -179,4 +196,20 @@
+         dto.setMetadataVersion(entity.getMetadataVersion());
+         return dto;
+     }
++
++    private GovernanceValidationDto toValidationDto(GovernanceValidationEntity entity) {
++        GovernanceValidationDto dto = new GovernanceValidationDto();
++        dto.setServiceName(entity.getServiceName());
++        dto.setValidationId(entity.getValidationId());
++        dto.setDtoType(entity.getDtoType());
++        dto.setFieldName(entity.getFieldName());
++        dto.setConstraintName(entity.getConstraintName());
++        dto.setConstraintType(entity.getConstraintType());
++        dto.setMessage(entity.getMessage());
++        dto.setControllerType(entity.getControllerType());
++        dto.setControllerMethod(entity.getControllerMethod());
++        dto.setHttpMethod(entity.getHttpMethod());
++        dto.setRequestPath(entity.getRequestPath());
++        return dto;
++    }
+ }
+Index: services/governance-service/src/main/java/com/example/governance/service/service/GovernanceCatalogService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.governance.service.service;\n\nimport com.example.governance.service.config.GovernanceDomainNamingRule;\nimport com.example.governance.service.config.GovernanceNamingProperties;\nimport com.example.governance.service.config.OpenMetadataProperties;\nimport com.example.governance.service.dto.ConformanceIssue;\nimport com.example.governance.service.dto.ConformanceReport;\nimport com.example.governance.service.dto.GovernanceAssetDto;\nimport com.example.governance.service.dto.GovernanceColumnMetadataDto;\nimport com.example.governance.service.dto.GovernanceMetadataDto;\nimport com.example.governance.service.dto.GovernanceSyncRequest;\nimport com.example.governance.service.dto.GovernanceTableMetadataDto;\nimport com.example.governance.service.entity.GovernanceAssetEntity;\nimport com.example.governance.service.openmetadata.OpenMetadataClient;\nimport com.example.governance.service.repository.GovernanceAssetRepository;\nimport java.time.Instant;\nimport java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.LinkedHashMap;\nimport java.util.List;\nimport java.util.Locale;\nimport java.util.Map;\nimport java.util.Optional;\nimport java.util.regex.Pattern;\nimport java.util.regex.PatternSyntaxException;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\n\n@Service\npublic class GovernanceCatalogService {\n\n    public static final String ASSET_ENTITY = \"ENTITY\";\n    public static final String ASSET_FIELD = \"FIELD\";\n\n    /**\n     * Stored in {@code field_name} for entity-level rows. Oracle converts {@code \"\"} to NULL.\n     */\n    public static final String ENTITY_FIELD_MARKER = \"__ENTITY__\";\n\n    private final GovernanceAssetRepository repository;\n    private final GovernanceNamingProperties namingProperties;\n    private final OpenMetadataProperties openMetadataProperties;\n    private final OpenMetadataClient openMetadataClient;\n    private final GovernanceRefreshNotifier refreshNotifier;\n\n    public GovernanceCatalogService(\n            GovernanceAssetRepository repository,\n            GovernanceNamingProperties namingProperties,\n            OpenMetadataProperties openMetadataProperties,\n            OpenMetadataClient openMetadataClient,\n            GovernanceRefreshNotifier refreshNotifier\n    ) {\n        this.repository = repository;\n        this.namingProperties = namingProperties;\n        this.openMetadataProperties = openMetadataProperties;\n        this.openMetadataClient = openMetadataClient;\n        this.refreshNotifier = refreshNotifier;\n    }\n\n    @Transactional\n    public List<GovernanceAssetEntity> sync(GovernanceSyncRequest request) {\n        if (request == null || request.serviceName() == null || request.serviceName().isBlank()) {\n            throw new IllegalArgumentException(\"serviceName is required\");\n        }\n        String serviceName = request.serviceName().trim();\n        Instant now = Instant.now();\n        List<GovernanceAssetEntity> saved = new ArrayList<>();\n        if (request.assets() == null) {\n            return saved;\n        }\n        for (GovernanceAssetDto dto : request.assets()) {\n            String fieldName = normalizeFieldName(dto.getFieldName(), dto.getAssetType());\n            GovernanceAssetEntity entity = repository\n                    .findByServiceNameAndEntityNameAndFieldName(serviceName, dto.getEntityName(), fieldName)\n                    .orElseGet(GovernanceAssetEntity::new);\n            entity.setServiceName(serviceName);\n            entity.setAssetType(dto.getAssetType() == null ? inferType(fieldName) : dto.getAssetType());\n            entity.setEntityName(dto.getEntityName());\n            entity.setFieldName(fieldName);\n            entity.setTableName(dto.getTableName());\n            entity.setColumnName(dto.getColumnName());\n            entity.setAssetId(blankToNull(dto.getAssetId()));\n            // Domain from asset id when present; otherwise accept synced domain for naming\n            String domain = blankToNull(dto.getDomain());\n            if (domain == null && entity.getAssetId() != null) {\n                domain = OpenMetadataClient.domainFromAssetId(entity.getAssetId());\n            }\n            entity.setDomain(domain);\n            entity.setDescription(blankToNull(dto.getDescription()));\n            // Do not overwrite mirrored OM attributes from annotation sync (identity only)\n            if (dto.getMetadataVersion() != null) {\n                entity.setMetadataVersion(dto.getMetadataVersion());\n            }\n            entity.setLastSeenAt(now);\n            saved.add(repository.save(entity));\n        }\n        return saved;\n    }\n\n    @Transactional(readOnly = true)\n    public List<GovernanceAssetEntity> list(String serviceName) {\n        if (serviceName == null || serviceName.isBlank()) {\n            return repository.findAllByOrderByServiceNameAscEntityNameAscFieldNameAsc();\n        }\n        return repository.findByServiceNameOrderByEntityNameAscFieldNameAsc(serviceName.trim());\n    }\n\n    /**\n     * Resolve authoritative metadata for an asset id from OpenMetadata, optionally\n     * mirroring into identity rows that share that assetId.\n     */\n    @Transactional\n    public GovernanceMetadataDto resolveAsset(String assetId) {\n        if (assetId == null || assetId.isBlank()) {\n            throw new IllegalArgumentException(\"assetId is required\");\n        }\n        String id = assetId.trim();\n        Optional<GovernanceMetadataDto> fromOm = openMetadataClient.fetchAsset(id);\n        if (fromOm.isPresent()) {\n            GovernanceMetadataDto meta = fromOm.get();\n            mirrorToIdentity(meta);\n            return meta;\n        }\n        // Fallback: last-known projection from identity catalog\n        return repository.findAllByOrderByServiceNameAscEntityNameAscFieldNameAsc().stream()\n                .filter(a -> id.equals(a.getAssetId()) && isEntityLevel(a))\n                .findFirst()\n                .map(a -> new GovernanceMetadataDto(\n                        a.getAssetId(),\n                        a.getMetadataVersion() == null ? 0L : a.getMetadataVersion(),\n                        a.getOwner(),\n                        a.getSteward(),\n                        a.getDomain(),\n                        a.getClassification(),\n                        a.getRetentionPolicy(),\n                        a.getDescription()\n                ))\n                .orElseThrow(() -> new IllegalArgumentException(\"Unknown governed asset: \" + id));\n    }\n\n    @Transactional\n    public void onRegistryAssetUpdated(String assetId) {\n        if (assetId == null || assetId.isBlank()) {\n            return;\n        }\n        try {\n            GovernanceMetadataDto meta = resolveAsset(assetId.trim());\n            refreshNotifier.notifyAssetUpdated(meta.assetId());\n        } catch (IllegalArgumentException ex) {\n            // unknown asset — still try fan-out for declared id\n            refreshNotifier.notifyAssetUpdated(assetId.trim());\n        }\n    }\n\n    private void mirrorToIdentity(GovernanceMetadataDto meta) {\n        List<GovernanceAssetEntity> rows = repository.findAllByOrderByServiceNameAscEntityNameAscFieldNameAsc();\n        Instant now = Instant.now();\n        for (GovernanceAssetEntity row : rows) {\n            if (!meta.assetId().equals(row.getAssetId()) || !isEntityLevel(row)) {\n                continue;\n            }\n            row.setOwner(blankToNull(meta.owner()));\n            row.setSteward(blankToNull(meta.steward()));\n            row.setClassification(blankToNull(meta.classification()));\n            row.setRetentionPolicy(blankToNull(meta.retentionPolicy()));\n            row.setDomain(blankToNull(meta.domain()));\n            if (meta.description() != null && !meta.description().isBlank()) {\n                row.setDescription(meta.description().trim());\n            }\n            row.setMetadataVersion(meta.version());\n            row.setLastSeenAt(now);\n            repository.save(row);\n        }\n    }\n\n    @Transactional(readOnly = true)\n    public List<GovernanceTableMetadataDto> listTables(String serviceName) {\n        List<GovernanceAssetEntity> assets = list(serviceName);\n        Map<String, GovernanceTableMetadataDto> tables = new LinkedHashMap<>();\n\n        for (GovernanceAssetEntity asset : assets) {\n            if (isEntityLevel(asset)) {\n                String key = tableKey(asset);\n                GovernanceTableMetadataDto table = tables.computeIfAbsent(key, k -> newTable(asset));\n                enrichTableFromEntity(table, asset);\n                // Overlay live OM metadata when available\n                if (asset.getAssetId() != null) {\n                    openMetadataClient.fetchAsset(asset.getAssetId()).ifPresent(meta -> {\n                        table.setOwner(meta.owner());\n                        table.setSteward(meta.steward());\n                        table.setClassification(meta.classification());\n                        table.setRetentionPolicy(meta.retentionPolicy());\n                        table.setDomain(meta.domain());\n                        table.setMetadataVersion(meta.version());\n                        if (meta.description() != null) {\n                            table.setDescription(meta.description());\n                        }\n                    });\n                }\n            }\n        }\n\n        for (GovernanceAssetEntity asset : assets) {\n            if (isEntityLevel(asset)) {\n                continue;\n            }\n            String key = tableKey(asset);\n            GovernanceTableMetadataDto table = tables.computeIfAbsent(key, k -> newTable(asset));\n            GovernanceColumnMetadataDto column = new GovernanceColumnMetadataDto();\n            column.setFieldName(toApiFieldName(asset.getFieldName()));\n            column.setColumnName(asset.getColumnName());\n            column.setClassification(asset.getClassification());\n            column.setOwner(asset.getOwner());\n            column.setDomain(asset.getDomain());\n            column.setDescription(asset.getDescription());\n            table.getColumns().add(column);\n        }\n\n        return new ArrayList<>(tables.values());\n    }\n\n    private static void enrichTableFromEntity(GovernanceTableMetadataDto table, GovernanceAssetEntity asset) {\n        table.setServiceName(asset.getServiceName());\n        table.setTableName(asset.getTableName());\n        table.setEntityName(asset.getEntityName());\n        table.setAssetId(asset.getAssetId());\n        table.setOwner(asset.getOwner());\n        table.setSteward(asset.getSteward());\n        table.setDomain(asset.getDomain());\n        table.setClassification(asset.getClassification());\n        table.setRetentionPolicy(asset.getRetentionPolicy());\n        table.setDescription(asset.getDescription());\n        table.setMetadataVersion(asset.getMetadataVersion());\n    }\n\n    private static GovernanceTableMetadataDto newTable(GovernanceAssetEntity asset) {\n        GovernanceTableMetadataDto table = new GovernanceTableMetadataDto();\n        table.setServiceName(asset.getServiceName());\n        table.setTableName(asset.getTableName());\n        table.setEntityName(asset.getEntityName());\n        table.setAssetId(asset.getAssetId());\n        return table;\n    }\n\n    private static String tableKey(GovernanceAssetEntity asset) {\n        return asset.getServiceName() + \"|\" + asset.getEntityName();\n    }\n\n    /**\n     * App-level: {@code @GovernedAsset} identity + naming conventions.\n     * Registry-level: owner/steward/classification/retention present in OpenMetadata.\n     */\n    @Transactional(readOnly = true)\n    public ConformanceReport conformance(String serviceName) {\n        if (serviceName == null || serviceName.isBlank()) {\n            throw new IllegalArgumentException(\"serviceName is required\");\n        }\n        String service = serviceName.trim();\n        List<GovernanceAssetEntity> assets =\n                repository.findByServiceNameOrderByEntityNameAscFieldNameAsc(service);\n        Map<String, GovernanceAssetEntity> entitiesByName = new HashMap<>();\n        for (GovernanceAssetEntity asset : assets) {\n            if (isEntityLevel(asset)) {\n                entitiesByName.put(asset.getEntityName(), asset);\n            }\n        }\n\n        List<ConformanceIssue> issues = new ArrayList<>();\n        for (GovernanceAssetEntity asset : assets) {\n            if (isEntityLevel(asset)) {\n                issues.addAll(entityIdentityIssues(asset));\n                String domain = asset.getDomain();\n                if (isBlank(domain) && !isBlank(asset.getAssetId())) {\n                    domain = OpenMetadataClient.domainFromAssetId(asset.getAssetId());\n                }\n                if (!isBlank(domain) && namingProperties.isEnforce()) {\n                    // temporary domain for naming check\n                    String previous = asset.getDomain();\n                    asset.setDomain(domain);\n                    issues.addAll(namingIssues(service, asset));\n                    asset.setDomain(previous);\n                }\n                if (openMetadataProperties.isEnabled() && openMetadataProperties.isRequireRegistryAttributes()\n                        && !isBlank(asset.getAssetId())) {\n                    issues.addAll(registryAttributeIssues(asset));\n                }\n                continue;\n            }\n\n            if (!isBlank(asset.getClassification())) {\n                GovernanceAssetEntity parent = entitiesByName.get(asset.getEntityName());\n                String domain = firstNonBlank(asset.getDomain(), parent == null ? null : parent.getDomain());\n                if (isBlank(domain) && parent != null && !isBlank(parent.getAssetId())) {\n                    domain = OpenMetadataClient.domainFromAssetId(parent.getAssetId());\n                }\n                if (isBlank(domain)) {\n                    issues.add(new ConformanceIssue(\n                            asset.getEntityName(),\n                            asset.getFieldName(),\n                            \"DOMAIN_REQUIRED_FOR_CLASSIFIED_FIELD\",\n                            \"Classified field has no domain on field or parent entity asset id\"\n                    ));\n                }\n            }\n        }\n        return new ConformanceReport(service, issues.isEmpty(), issues);\n    }\n\n    private List<ConformanceIssue> entityIdentityIssues(GovernanceAssetEntity asset) {\n        List<ConformanceIssue> issues = new ArrayList<>();\n        if (isBlank(asset.getAssetId())) {\n            issues.add(new ConformanceIssue(\n                    asset.getEntityName(),\n                    \"\",\n                    \"GOVERNED_ASSET_REQUIRED\",\n                    \"Entity is missing @GovernedAsset asset id\"\n            ));\n        }\n        return issues;\n    }\n\n    private List<ConformanceIssue> registryAttributeIssues(GovernanceAssetEntity asset) {\n        List<ConformanceIssue> issues = new ArrayList<>();\n        Optional<GovernanceMetadataDto> meta = openMetadataClient.fetchAsset(asset.getAssetId());\n        if (meta.isEmpty()) {\n            issues.add(new ConformanceIssue(\n                    asset.getEntityName(),\n                    \"\",\n                    \"REGISTRY_ASSET_MISSING\",\n                    \"Governed asset '\" + asset.getAssetId() + \"' is not registered in OpenMetadata\"\n            ));\n            return issues;\n        }\n        GovernanceMetadataDto m = meta.get();\n        if (isBlank(m.owner())) {\n            issues.add(new ConformanceIssue(\n                    asset.getEntityName(), \"\", \"OWNER_REQUIRED\",\n                    \"OpenMetadata asset '\" + asset.getAssetId() + \"' is missing owner\"\n            ));\n        }\n        if (isBlank(m.steward())) {\n            issues.add(new ConformanceIssue(\n                    asset.getEntityName(), \"\", \"STEWARD_REQUIRED\",\n                    \"OpenMetadata asset '\" + asset.getAssetId() + \"' is missing steward\"\n            ));\n        }\n        if (isBlank(m.classification())) {\n            issues.add(new ConformanceIssue(\n                    asset.getEntityName(), \"\", \"CLASSIFICATION_REQUIRED\",\n                    \"OpenMetadata asset '\" + asset.getAssetId() + \"' is missing classification\"\n            ));\n        }\n        if (isBlank(m.retentionPolicy())) {\n            issues.add(new ConformanceIssue(\n                    asset.getEntityName(), \"\", \"RETENTION_POLICY_REQUIRED\",\n                    \"OpenMetadata asset '\" + asset.getAssetId() + \"' is missing retentionPolicy\"\n            ));\n        }\n        return issues;\n    }\n\n    private List<ConformanceIssue> namingIssues(String serviceName, GovernanceAssetEntity entity) {\n        List<ConformanceIssue> issues = new ArrayList<>();\n        Optional<GovernanceDomainNamingRule> ruleOpt = namingProperties.findDomain(entity.getDomain());\n        if (ruleOpt.isEmpty()) {\n            issues.add(new ConformanceIssue(\n                    entity.getEntityName(),\n                    \"\",\n                    \"DOMAIN_NOT_ALLOWED\",\n                    \"Domain '\" + entity.getDomain() + \"' is not in app.governance.naming.domains\"\n            ));\n            return issues;\n        }\n\n        GovernanceDomainNamingRule rule = ruleOpt.get();\n        if (rule.getServices() != null && !rule.getServices().isEmpty()\n                && rule.getServices().stream().noneMatch(s -> s.equalsIgnoreCase(serviceName))) {\n            issues.add(new ConformanceIssue(\n                    entity.getEntityName(),\n                    \"\",\n                    \"DOMAIN_SERVICE_MISMATCH\",\n                    \"Domain '\" + entity.getDomain() + \"' is not allowed for service '\" + serviceName + \"'\"\n            ));\n        }\n\n        if (isBlank(entity.getTableName())) {\n            issues.add(new ConformanceIssue(\n                    entity.getEntityName(),\n                    \"\",\n                    \"TABLE_NAME_REQUIRED\",\n                    \"Entity is missing @Table name / tableName in catalog\"\n            ));\n            return issues;\n        }\n\n        String physical = entity.getTableName().trim().toUpperCase(Locale.ROOT);\n        String pattern = resolveTablePattern(rule);\n        try {\n            if (!Pattern.compile(pattern).matcher(physical).matches()) {\n                issues.add(new ConformanceIssue(\n                        entity.getEntityName(),\n                        \"\",\n                        \"TABLE_NAME_CONVENTION\",\n                        \"Table '\" + entity.getTableName() + \"' does not match domain '\"\n                                + rule.getId() + \"' pattern \" + pattern\n                ));\n            }\n        } catch (PatternSyntaxException ex) {\n            issues.add(new ConformanceIssue(\n                    entity.getEntityName(),\n                    \"\",\n                    \"TABLE_NAME_PATTERN_INVALID\",\n                    \"Configured table-pattern for domain '\" + rule.getId() + \"' is invalid: \" + pattern\n            ));\n        }\n        return issues;\n    }\n\n    public static String resolveTablePattern(GovernanceDomainNamingRule rule) {\n        if (rule.getTablePattern() != null && !rule.getTablePattern().isBlank()) {\n            return rule.getTablePattern().trim();\n        }\n        String prefix = rule.getTablePrefix() == null ? \"\" : rule.getTablePrefix().trim().toUpperCase(Locale.ROOT);\n        return \"^\" + Pattern.quote(prefix) + \"[A-Z0-9_]+$\";\n    }\n\n    public static String toApiFieldName(String storedFieldName) {\n        return isEntityFieldName(storedFieldName) ? \"\" : storedFieldName;\n    }\n\n    static String normalizeFieldName(String fieldName, String assetType) {\n        if (ASSET_ENTITY.equals(assetType) || isEntityFieldName(fieldName)) {\n            return ENTITY_FIELD_MARKER;\n        }\n        return fieldName.trim();\n    }\n\n    private static boolean isEntityLevel(GovernanceAssetEntity asset) {\n        return ASSET_ENTITY.equals(asset.getAssetType()) || isEntityFieldName(asset.getFieldName());\n    }\n\n    private static boolean isEntityFieldName(String fieldName) {\n        return isBlank(fieldName) || ENTITY_FIELD_MARKER.equals(fieldName);\n    }\n\n    private static String inferType(String fieldName) {\n        return isEntityFieldName(fieldName) ? ASSET_ENTITY : ASSET_FIELD;\n    }\n\n    private static String blankToNull(String value) {\n        return isBlank(value) ? null : value.trim();\n    }\n\n    private static boolean isBlank(String value) {\n        return value == null || value.isBlank();\n    }\n\n    private static String firstNonBlank(String primary, String fallback) {\n        if (!isBlank(primary)) {\n            return primary;\n        }\n        return isBlank(fallback) ? null : fallback;\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/governance-service/src/main/java/com/example/governance/service/service/GovernanceCatalogService.java b/services/governance-service/src/main/java/com/example/governance/service/service/GovernanceCatalogService.java
+--- a/services/governance-service/src/main/java/com/example/governance/service/service/GovernanceCatalogService.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/governance-service/src/main/java/com/example/governance/service/service/GovernanceCatalogService.java	(date 1791956514999)
+@@ -10,9 +10,12 @@
+ import com.example.governance.service.dto.GovernanceMetadataDto;
+ import com.example.governance.service.dto.GovernanceSyncRequest;
+ import com.example.governance.service.dto.GovernanceTableMetadataDto;
++import com.example.governance.service.dto.GovernanceValidationDto;
+ import com.example.governance.service.entity.GovernanceAssetEntity;
++import com.example.governance.service.entity.GovernanceValidationEntity;
+ import com.example.governance.service.openmetadata.OpenMetadataClient;
+ import com.example.governance.service.repository.GovernanceAssetRepository;
++import com.example.governance.service.repository.GovernanceValidationRepository;
+ import java.time.Instant;
+ import java.util.ArrayList;
+ import java.util.HashMap;
+@@ -38,6 +41,7 @@
+     public static final String ENTITY_FIELD_MARKER = "__ENTITY__";
+ 
+     private final GovernanceAssetRepository repository;
++    private final GovernanceValidationRepository validationRepository;
+     private final GovernanceNamingProperties namingProperties;
+     private final OpenMetadataProperties openMetadataProperties;
+     private final OpenMetadataClient openMetadataClient;
+@@ -45,12 +49,14 @@
+ 
+     public GovernanceCatalogService(
+             GovernanceAssetRepository repository,
++            GovernanceValidationRepository validationRepository,
+             GovernanceNamingProperties namingProperties,
+             OpenMetadataProperties openMetadataProperties,
+             OpenMetadataClient openMetadataClient,
+             GovernanceRefreshNotifier refreshNotifier
+     ) {
+         this.repository = repository;
++        this.validationRepository = validationRepository;
+         this.namingProperties = namingProperties;
+         this.openMetadataProperties = openMetadataProperties;
+         this.openMetadataClient = openMetadataClient;
+@@ -65,38 +71,90 @@
+         String serviceName = request.serviceName().trim();
+         Instant now = Instant.now();
+         List<GovernanceAssetEntity> saved = new ArrayList<>();
+-        if (request.assets() == null) {
+-            return saved;
+-        }
+-        for (GovernanceAssetDto dto : request.assets()) {
+-            String fieldName = normalizeFieldName(dto.getFieldName(), dto.getAssetType());
+-            GovernanceAssetEntity entity = repository
+-                    .findByServiceNameAndEntityNameAndFieldName(serviceName, dto.getEntityName(), fieldName)
+-                    .orElseGet(GovernanceAssetEntity::new);
+-            entity.setServiceName(serviceName);
+-            entity.setAssetType(dto.getAssetType() == null ? inferType(fieldName) : dto.getAssetType());
+-            entity.setEntityName(dto.getEntityName());
+-            entity.setFieldName(fieldName);
+-            entity.setTableName(dto.getTableName());
+-            entity.setColumnName(dto.getColumnName());
+-            entity.setAssetId(blankToNull(dto.getAssetId()));
+-            // Domain from asset id when present; otherwise accept synced domain for naming
+-            String domain = blankToNull(dto.getDomain());
+-            if (domain == null && entity.getAssetId() != null) {
+-                domain = OpenMetadataClient.domainFromAssetId(entity.getAssetId());
+-            }
+-            entity.setDomain(domain);
+-            entity.setDescription(blankToNull(dto.getDescription()));
+-            // Do not overwrite mirrored OM attributes from annotation sync (identity only)
+-            if (dto.getMetadataVersion() != null) {
+-                entity.setMetadataVersion(dto.getMetadataVersion());
+-            }
+-            entity.setLastSeenAt(now);
+-            saved.add(repository.save(entity));
++        if (request.assets() != null) {
++            for (GovernanceAssetDto dto : request.assets()) {
++                String fieldName = normalizeFieldName(dto.getFieldName(), dto.getAssetType());
++                GovernanceAssetEntity entity = repository
++                        .findByServiceNameAndEntityNameAndFieldName(serviceName, dto.getEntityName(), fieldName)
++                        .orElseGet(GovernanceAssetEntity::new);
++                entity.setServiceName(serviceName);
++                entity.setAssetType(dto.getAssetType() == null ? inferType(fieldName) : dto.getAssetType());
++                entity.setEntityName(dto.getEntityName());
++                entity.setFieldName(fieldName);
++                entity.setTableName(dto.getTableName());
++                entity.setColumnName(dto.getColumnName());
++                entity.setAssetId(blankToNull(dto.getAssetId()));
++                // Domain from asset id when present; otherwise accept synced domain for naming
++                String domain = blankToNull(dto.getDomain());
++                if (domain == null && entity.getAssetId() != null) {
++                    domain = OpenMetadataClient.domainFromAssetId(entity.getAssetId());
++                }
++                entity.setDomain(domain);
++                entity.setDescription(blankToNull(dto.getDescription()));
++                // Do not overwrite mirrored OM attributes from annotation sync (identity only)
++                if (dto.getMetadataVersion() != null) {
++                    entity.setMetadataVersion(dto.getMetadataVersion());
++                }
++                entity.setLastSeenAt(now);
++                saved.add(repository.save(entity));
++            }
+         }
++        syncValidations(serviceName, request.validations(), now);
+         return saved;
+     }
+ 
++    @Transactional
++    public List<GovernanceValidationEntity> syncValidations(
++            String serviceName,
++            List<GovernanceValidationDto> validations,
++            Instant now
++    ) {
++        List<GovernanceValidationEntity> saved = new ArrayList<>();
++        if (validations == null || validations.isEmpty()) {
++            return saved;
++        }
++        Instant seenAt = now == null ? Instant.now() : now;
++        for (GovernanceValidationDto dto : validations) {
++            String validationId = blankToNull(dto.getValidationId());
++            if (validationId == null) {
++                throw new IllegalArgumentException("validationId is required");
++            }
++            GovernanceValidationEntity entity = validationRepository
++                    .findByValidationId(validationId)
++                    .orElseGet(GovernanceValidationEntity::new);
++            entity.setValidationId(validationId);
++            entity.setServiceName(serviceName);
++            entity.setDtoType(blankToNull(dto.getDtoType()));
++            entity.setFieldName(blankToNull(dto.getFieldName()));
++            entity.setConstraintName(blankToNull(dto.getConstraintName()));
++            entity.setConstraintType(blankToNull(dto.getConstraintType()));
++            entity.setMessage(blankToNull(dto.getMessage()));
++            entity.setControllerType(blankToNull(dto.getControllerType()));
++            entity.setControllerMethod(blankToNull(dto.getControllerMethod()));
++            entity.setHttpMethod(blankToNull(dto.getHttpMethod()));
++            entity.setRequestPath(blankToNull(dto.getRequestPath()));
++            entity.setLastSeenAt(seenAt);
++            saved.add(validationRepository.save(entity));
++        }
++        return saved;
++    }
++
++    @Transactional(readOnly = true)
++    public List<GovernanceValidationEntity> listValidations(String serviceName) {
++        if (serviceName == null || serviceName.isBlank()) {
++            return validationRepository.findAllByOrderByServiceNameAscValidationIdAsc();
++        }
++        return validationRepository.findByServiceNameOrderByValidationIdAsc(serviceName.trim());
++    }
++
++    @Transactional(readOnly = true)
++    public Optional<GovernanceValidationEntity> findValidation(String validationId) {
++        if (validationId == null || validationId.isBlank()) {
++            return Optional.empty();
++        }
++        return validationRepository.findByValidationId(validationId.trim());
++    }
++
+     @Transactional(readOnly = true)
+     public List<GovernanceAssetEntity> list(String serviceName) {
+         if (serviceName == null || serviceName.isBlank()) {
+Index: services/governance-service/src/main/java/com/example/governance/service/dto/GovernanceSyncRequest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.governance.service.dto;\n\nimport java.util.List;\n\npublic record GovernanceSyncRequest(String serviceName, List<GovernanceAssetDto> assets) {\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/governance-service/src/main/java/com/example/governance/service/dto/GovernanceSyncRequest.java b/services/governance-service/src/main/java/com/example/governance/service/dto/GovernanceSyncRequest.java
+--- a/services/governance-service/src/main/java/com/example/governance/service/dto/GovernanceSyncRequest.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/governance-service/src/main/java/com/example/governance/service/dto/GovernanceSyncRequest.java	(date 1791956231760)
+@@ -2,5 +2,17 @@
+ 
+ import java.util.List;
+ 
+-public record GovernanceSyncRequest(String serviceName, List<GovernanceAssetDto> assets) {
++public record GovernanceSyncRequest(
++        String serviceName,
++        List<GovernanceAssetDto> assets,
++        List<GovernanceValidationDto> validations
++) {
++    public GovernanceSyncRequest {
++        assets = assets == null ? List.of() : assets;
++        validations = validations == null ? List.of() : validations;
++    }
++
++    public GovernanceSyncRequest(String serviceName, List<GovernanceAssetDto> assets) {
++        this(serviceName, assets, List.of());
++    }
+ }
+Index: services/refund-service/pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n  <modelVersion>4.0.0</modelVersion>\n\n  <parent>\n    <groupId>com.example</groupId>\n    <artifactId>camunda-tutorial</artifactId>\n    <version>0.0.1-SNAPSHOT</version>\n    <relativePath>../../pom.xml</relativePath>\n  </parent>\n\n  <artifactId>refund-service</artifactId>\n  <name>refund-service</name>\n  <description>Refund domain microservice (no embedded Camunda)</description>\n\n  <dependencies>\n    <dependency>\n      <groupId>com.example</groupId>\n      <artifactId>governance-runtime</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>com.example</groupId>\n      <artifactId>camunda-client</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-web</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-data-jpa</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>com.oracle.database.jdbc</groupId>\n      <artifactId>ojdbc17</artifactId>\n    </dependency>\n    <dependency>\n      <groupId>org.projectlombok</groupId>\n      <artifactId>lombok</artifactId>\n      <version>${lombok.version}</version>\n      <optional>true</optional>\n    </dependency>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-test</artifactId>\n      <scope>test</scope>\n    </dependency>\n  </dependencies>\n\n  <build>\n    <plugins>\n      <plugin>\n        <groupId>org.springframework.boot</groupId>\n        <artifactId>spring-boot-maven-plugin</artifactId>\n        <configuration>\n          <skip>false</skip>\n        </configuration>\n        <executions>\n          <execution>\n            <goals>\n              <goal>repackage</goal>\n            </goals>\n          </execution>\n        </executions>\n      </plugin>\n      <plugin>\n        <groupId>org.apache.maven.plugins</groupId>\n        <artifactId>maven-compiler-plugin</artifactId>\n        <configuration>\n          <annotationProcessorPaths>\n            <path>\n              <groupId>org.projectlombok</groupId>\n              <artifactId>lombok</artifactId>\n              <version>${lombok.version}</version>\n            </path>\n          </annotationProcessorPaths>\n        </configuration>\n      </plugin>\n    </plugins>\n  </build>\n</project>\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/pom.xml b/services/refund-service/pom.xml
+--- a/services/refund-service/pom.xml	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/pom.xml	(date 1791955555026)
+@@ -30,6 +30,10 @@
+     </dependency>
+     <dependency>
+       <groupId>org.springframework.boot</groupId>
++      <artifactId>spring-boot-starter-validation</artifactId>
++    </dependency>
++    <dependency>
++      <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-data-jpa</artifactId>
+     </dependency>
+     <dependency>
+Index: services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.governance.service.service;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.mockito.ArgumentMatchers.anyString;\nimport static org.mockito.Mockito.when;\n\nimport com.example.governance.service.config.GovernanceNamingProperties;\nimport com.example.governance.service.config.OpenMetadataProperties;\nimport com.example.governance.service.dto.ConformanceReport;\nimport com.example.governance.service.dto.GovernanceAssetDto;\nimport com.example.governance.service.dto.GovernanceMetadataDto;\nimport com.example.governance.service.dto.GovernanceSyncRequest;\nimport com.example.governance.service.dto.GovernanceTableMetadataDto;\nimport com.example.governance.service.openmetadata.OpenMetadataClient;\nimport java.util.List;\nimport java.util.Optional;\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.boot.context.properties.EnableConfigurationProperties;\nimport org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\nimport org.springframework.context.annotation.Import;\nimport org.springframework.test.context.TestPropertySource;\nimport org.springframework.test.context.bean.override.mockito.MockitoBean;\n\n@DataJpaTest\n@Import(GovernanceCatalogService.class)\n@EnableConfigurationProperties({GovernanceNamingProperties.class, OpenMetadataProperties.class})\n@TestPropertySource(properties = {\n        \"app.governance.openmetadata.enabled=true\",\n        \"app.governance.openmetadata.require-registry-attributes=true\",\n        \"app.governance.openmetadata.seed=false\"\n})\nclass GovernanceCatalogServiceTest {\n\n    @Autowired\n    private GovernanceCatalogService catalogService;\n\n    @MockitoBean\n    private OpenMetadataClient openMetadataClient;\n\n    @MockitoBean\n    private GovernanceRefreshNotifier refreshNotifier;\n\n    @BeforeEach\n    void stubRegistry() {\n        when(openMetadataClient.isEnabled()).thenReturn(true);\n        when(openMetadataClient.fetchAsset(anyString())).thenAnswer(invocation -> {\n            String assetId = invocation.getArgument(0);\n            return Optional.of(new GovernanceMetadataDto(\n                    assetId,\n                    1L,\n                    \"tax-ops\",\n                    \"Refund Data Management\",\n                    \"refunds\",\n                    \"PII\",\n                    \"REFUND_RETENTION\",\n                    \"Refund application business record\"\n            ));\n        });\n    }\n\n    @Test\n    void syncAndConformance_requiresGovernedAssetAndRegistry() {\n        GovernanceAssetDto entity = validRefundEntity();\n        entity.setDescription(\"Refund application business record\");\n\n        GovernanceAssetDto field = new GovernanceAssetDto();\n        field.setAssetType(\"FIELD\");\n        field.setEntityName(\"com.example.refund.entity.RefundApplicationEntity\");\n        field.setFieldName(\"firstName\");\n        field.setTableName(\"RFND_APPL\");\n        field.setColumnName(\"first_name\");\n        field.setClassification(\"PII\");\n        field.setAssetId(\"refunds.application\");\n        field.setDomain(\"refunds\");\n\n        catalogService.sync(new GovernanceSyncRequest(\"refund-service\", List.of(entity, field)));\n\n        ConformanceReport report = catalogService.conformance(\"refund-service\");\n        assertThat(report.compliant()).isTrue();\n\n        List<GovernanceTableMetadataDto> tables = catalogService.listTables(\"refund-service\");\n        assertThat(tables).hasSize(1);\n        assertThat(tables.get(0).getAssetId()).isEqualTo(\"refunds.application\");\n        assertThat(tables.get(0).getSteward()).isEqualTo(\"Refund Data Management\");\n        assertThat(tables.get(0).getColumns()).hasSize(1);\n    }\n\n    @Test\n    void conformance_failsWhenGovernedAssetMissing() {\n        GovernanceAssetDto entity = validRefundEntity();\n        entity.setAssetId(null);\n        entity.setDomain(\"refunds\");\n\n        catalogService.sync(new GovernanceSyncRequest(\"refund-service\", List.of(entity)));\n\n        ConformanceReport report = catalogService.conformance(\"refund-service\");\n        assertThat(report.compliant()).isFalse();\n        assertThat(report.issues()).anyMatch(i -> \"GOVERNED_ASSET_REQUIRED\".equals(i.rule()));\n    }\n\n    @Test\n    void conformance_failsWhenRegistryAssetMissing() {\n        when(openMetadataClient.fetchAsset(\"refunds.application\")).thenReturn(Optional.empty());\n\n        catalogService.sync(new GovernanceSyncRequest(\"refund-service\", List.of(validRefundEntity())));\n\n        ConformanceReport report = catalogService.conformance(\"refund-service\");\n        assertThat(report.compliant()).isFalse();\n        assertThat(report.issues()).anyMatch(i -> \"REGISTRY_ASSET_MISSING\".equals(i.rule()));\n    }\n\n    @Test\n    void conformance_failsWhenStewardMissingInRegistry() {\n        when(openMetadataClient.fetchAsset(\"refunds.application\")).thenReturn(Optional.of(\n                new GovernanceMetadataDto(\n                        \"refunds.application\", 1L, \"tax-ops\", null, \"refunds\", \"PII\", \"REFUND_RETENTION\", null\n                )\n        ));\n\n        catalogService.sync(new GovernanceSyncRequest(\"refund-service\", List.of(validRefundEntity())));\n\n        ConformanceReport report = catalogService.conformance(\"refund-service\");\n        assertThat(report.compliant()).isFalse();\n        assertThat(report.issues()).anyMatch(i -> \"STEWARD_REQUIRED\".equals(i.rule()));\n    }\n\n    @Test\n    void conformance_failsWhenDomainNotAllowed() {\n        GovernanceAssetDto entity = validRefundEntity();\n        entity.setAssetId(\"unknown-domain.thing\");\n        entity.setDomain(null);\n\n        when(openMetadataClient.fetchAsset(\"unknown-domain.thing\")).thenReturn(Optional.of(\n                new GovernanceMetadataDto(\n                        \"unknown-domain.thing\", 1L, \"x\", \"y\", \"unknown-domain\", \"PII\", \"R\", null\n                )\n        ));\n\n        catalogService.sync(new GovernanceSyncRequest(\"refund-service\", List.of(entity)));\n\n        ConformanceReport report = catalogService.conformance(\"refund-service\");\n        assertThat(report.compliant()).isFalse();\n        assertThat(report.issues()).anyMatch(i -> \"DOMAIN_NOT_ALLOWED\".equals(i.rule()));\n    }\n\n    @Test\n    void conformance_failsWhenTableNameBreaksConvention() {\n        GovernanceAssetDto entity = validRefundEntity();\n        entity.setTableName(\"refund_application\");\n\n        catalogService.sync(new GovernanceSyncRequest(\"refund-service\", List.of(entity)));\n\n        ConformanceReport report = catalogService.conformance(\"refund-service\");\n        assertThat(report.compliant()).isFalse();\n        assertThat(report.issues()).anyMatch(i -> \"TABLE_NAME_CONVENTION\".equals(i.rule()));\n    }\n\n    private static GovernanceAssetDto validRefundEntity() {\n        GovernanceAssetDto entity = new GovernanceAssetDto();\n        entity.setAssetType(\"ENTITY\");\n        entity.setEntityName(\"com.example.refund.entity.RefundApplicationEntity\");\n        entity.setFieldName(\"\");\n        entity.setTableName(\"RFND_APPL\");\n        entity.setAssetId(\"refunds.application\");\n        entity.setDomain(\"refunds\");\n        return entity;\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java b/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java
+--- a/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/governance-service/src/test/java/com/example/governance/service/service/GovernanceCatalogServiceTest.java	(date 1791956688520)
+@@ -11,6 +11,8 @@
+ import com.example.governance.service.dto.GovernanceMetadataDto;
+ import com.example.governance.service.dto.GovernanceSyncRequest;
+ import com.example.governance.service.dto.GovernanceTableMetadataDto;
++import com.example.governance.service.dto.GovernanceValidationDto;
++import com.example.governance.service.entity.GovernanceValidationEntity;
+ import com.example.governance.service.openmetadata.OpenMetadataClient;
+ import java.util.List;
+ import java.util.Optional;
+@@ -157,6 +159,44 @@
+         assertThat(report.issues()).anyMatch(i -> "TABLE_NAME_CONVENTION".equals(i.rule()));
+     }
+ 
++    @Test
++    void sync_upsertsDiscoveredRequestValidations() {
++        GovernanceValidationDto validation = new GovernanceValidationDto();
++        validation.setValidationId("refund-service.RefundApplicationRequest.firstName.NotBlank");
++        validation.setDtoType("com.example.refund.dto.RefundApplicationRequest");
++        validation.setFieldName("firstName");
++        validation.setConstraintName("NotBlank");
++        validation.setConstraintType("jakarta.validation.constraints.NotBlank");
++        validation.setMessage("firstName is required");
++        validation.setControllerType("com.example.refund.controller.RefundApplicationController");
++        validation.setControllerMethod("start");
++        validation.setHttpMethod("POST");
++        validation.setRequestPath("/api/refund-applications");
++
++        catalogService.sync(new GovernanceSyncRequest(
++                "refund-service",
++                List.of(validRefundEntity()),
++                List.of(validation)
++        ));
++
++        List<GovernanceValidationEntity> listed = catalogService.listValidations("refund-service");
++        assertThat(listed).hasSize(1);
++        assertThat(listed.get(0).getValidationId())
++                .isEqualTo("refund-service.RefundApplicationRequest.firstName.NotBlank");
++        assertThat(listed.get(0).getConstraintName()).isEqualTo("NotBlank");
++
++        validation.setMessage("updated message");
++        catalogService.sync(new GovernanceSyncRequest("refund-service", List.of(), List.of(validation)));
++
++        assertThat(catalogService.listValidations("refund-service")).hasSize(1);
++        assertThat(catalogService.findValidation(
++                "refund-service.RefundApplicationRequest.firstName.NotBlank"))
++                .isPresent()
++                .get()
++                .extracting(GovernanceValidationEntity::getMessage)
++                .isEqualTo("updated message");
++    }
++
+     private static GovernanceAssetDto validRefundEntity() {
+         GovernanceAssetDto entity = new GovernanceAssetDto();
+         entity.setAssetType("ENTITY");
+Index: README.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># Camunda microservices tutorial\n\n## Layout\n\n```text\ncamunda-tutorial/\n├── db/oracle/                    # schema bootstrap SQL for Oracle 26ai\n├── libs/\n│   ├── governance-annotations/   # @GovernedAsset, @Sensitive, …\n│   ├── governance-runtime/       # scan/publish, local metadata cache, refresh\n│   └── camunda-client/\n├── docker-compose.yml            # Oracle\n├── docker-compose.openmetadata.yml  # MySQL + ES + OpenMetadata\n└── services/\n    ├── camunda-service/          # :8080 shared Camunda engine\n    ├── governance-service/       # :8081 identity catalog + OpenMetadata facade\n    ├── refund-service/           # :8082 refund domain API + data\n    └── taxpayer-service/         # :8083 taxpayer domain API + data\n```\n\nEach service uses layered packages: `controller`, `service`, `dto`, `entity`, `repository`, (+ `mapper` / `delegate` where needed).\n\n## Database (Oracle 26ai)\n\nEach microservice uses **Oracle** (`ojdbc17`) and its **own schema** (DB user). Defaults share one PDB (`FREEPDB1`) with four schemas; override `*_JDBC_URL` for a dedicated DB/PDB per service.\n\n| Service | Schema (user) | Default password | JDBC URL env |\n|---------|---------------|------------------|--------------|\n| camunda-service | `CAMUNDA_SERVICE` | `Camunda_Pass_1` | `CAMUNDA_JDBC_URL` |\n| governance-service | `GOVERNANCE_SERVICE` | `Governance_Pass_1` | `GOVERNANCE_JDBC_URL` |\n| refund-service | `REFUND_SERVICE` | `Refund_Pass_1` | `REFUND_JDBC_URL` |\n| taxpayer-service | `TAXPAYER_SERVICE` | `Taxpayer_Pass_1` | `TAXPAYER_JDBC_URL` |\n\nShared host default: `ORACLE_JDBC_URL=jdbc:oracle:thin:@//localhost:1521/FREEPDB1`\n\n### Start Oracle locally\n\n```bash\ndocker compose up -d oracle\n# first boot runs db/oracle/init/01-create-schemas.sh (createAppUser in FREEPDB1)\n```\n\n## Hybrid governance (identity in code, attributes in OpenMetadata)\n\nGovernance attributes (owner, steward, classification, retention) change independently of application releases. The hybrid model:\n\n1. **Code** declares asset identity only: `@GovernedAsset(\"refunds.application\")`.\n2. **Domain** for naming is derived from the asset id prefix (`refunds`).\n3. **OpenMetadata** stores mutable attributes (create glossary terms / tags in the OM UI as needed).\n4. **governance-service** is the facade: syncs identity, resolves metadata from OM, runs conformance.\n5. **Domain services** cache resolved metadata and refresh via webhook / poll — **no restart** when ownership changes.\n\nStartup does **not** auto-seed OpenMetadata glossary terms (`app.governance.openmetadata.seed=false`). Set `seed: true` only if you want the demo seed runner.\n\n```java\n@Entity\n@Table(name = \"RFND_APPL\")\n@GovernedAsset(\"refunds.application\")\npublic class RefundApplicationEntity { … }\n```\n\n| Lives in code | Lives in OpenMetadata |\n|---------------|------------------------|\n| `@GovernedAsset` id | owner, steward |\n| `@Table` name (naming check) | classification, retention |\n| `@Sensitive` / `@Comment` | versioned updates |\n\n### OpenMetadata stack\n\n```bash\ndocker compose -f docker-compose.yml -f docker-compose.openmetadata.yml up -d\n# UI http://localhost:8585  — admin / admin\n```\n\nPrerequisites in compose: MySQL (`openmetadata/db`), Elasticsearch 8.10, migrate job, `openmetadata/server` (no Airflow).\n\nConfigure an OpenMetadata **generic alert** destination to  \n`http://host.docker.internal:8081/api/governance/webhooks/openmetadata`  \nso attribute changes fan out to service caches. Services also poll every 60s as a fallback.\n\n### Governance update lifecycle\n\n1. Admin updates owner for `refunds.application` in OpenMetadata (UI or API).\n2. OM persists a new entity version.\n3. Alert/webhook hits governance-service (or wait for poll).\n4. Domain services `POST /internal/governance/refresh?assetId=…` and atomically replace cache when `latest.version >= current.version`.\n5. New requests use updated rules — no redeploy.\n\n## Runtime flow (domain APIs first)\n\n1. Client calls `refund-service` or `taxpayer-service`\n2. That service starts a process on **shared** `camunda-service`\n3. Camunda delegates call `/internal/...` APIs on the domain services\n4. Domain services own their schema/data and business logic\n\n## Start everything\n\n```bash\n./scripts/start-all.sh          # Oracle + OpenMetadata + all 4 services\n./scripts/stop-all.sh           # stop services (containers keep running)\n./scripts/stop-all.sh --with-db # stop services + Oracle + OpenMetadata\n\n# Demo helpers (see scripts/demo/)\n./scripts/demo/reset-openmetadata.sh --yes   # wipe OM catalog, keep Oracle\n```\n\nLogs/pids: `.logs/`. Or run mains in IntelliJ / one `mvn -pl services/<name> -am spring-boot:run` per terminal.\n\n## URLs\n\n| Service | URL |\n|---------|-----|\n| Camunda Cockpit | http://localhost:8080 (`demo`/`demo`) |\n| OpenMetadata | http://localhost:8585 (`admin`/`admin`) |\n| Governance tables | http://localhost:8081/api/governance/tables |\n| Resolve asset | http://localhost:8081/api/governance/assets/refunds.application |\n| Conformance | http://localhost:8081/api/governance/conformance?service=refund-service |\n| OM webhook | http://localhost:8081/api/governance/webhooks/openmetadata |\n| Refunds API | http://localhost:8082/api/refund-applications |\n| Taxpayer API | http://localhost:8083/api/taxpayer-registrations |\n\n- **Naming policy** (`/api/governance/naming-domains`): allow-listed domains + table prefixes (`REG_`, `RFND_`, …) — still enforced in the application / governance-service.\n- **Oracle `COMMENT ON`**: only `@Comment` text (applied on domain-service startup).\n\nMissing `@GovernedAsset`, unknown domains, bad table names, or missing OpenMetadata attributes fail  \n`GET /api/governance/conformance?service=…`.\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/README.md b/README.md
+--- a/README.md	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/README.md	(date 1791956692572)
+@@ -64,6 +64,16 @@
+ | `@GovernedAsset` id | owner, steward |
+ | `@Table` name (naming check) | classification, retention |
+ | `@Sensitive` / `@Comment` | versioned updates |
++| Bean Validation on `@Valid` request DTOs | (catalog only; OM test-case hook later) |
++
++### Request validation catalog
++
++Domain services discover Jakarta Bean Validation constraints on `@Valid @RequestBody` DTOs at startup and sync them to governance-service.
++
++Stable id format: `{service}.{DtoSimpleName}.{propertyPath}.{ConstraintSimpleName}`  
++Example: `refund-service.RefundApplicationRequest.firstName.NotBlank`
++
++Browse: `GET /api/governance/validations?service=refund-service`
+ 
+ ### OpenMetadata stack
+ 
+@@ -113,6 +123,7 @@
+ | Camunda Cockpit | http://localhost:8080 (`demo`/`demo`) |
+ | OpenMetadata | http://localhost:8585 (`admin`/`admin`) |
+ | Governance tables | http://localhost:8081/api/governance/tables |
++| Validation catalog | http://localhost:8081/api/governance/validations |
+ | Resolve asset | http://localhost:8081/api/governance/assets/refunds.application |
+ | Conformance | http://localhost:8081/api/governance/conformance?service=refund-service |
+ | OM webhook | http://localhost:8081/api/governance/webhooks/openmetadata |
+Index: services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.dto;\n\nimport com.example.governance.annotations.Sensitive;\nimport com.example.governance.annotations.SensitiveType;\nimport lombok.Data;\n\n@Data\npublic class CreateRefundProcessRequest {\n    private String processInstanceId;\n\n    @Sensitive(SensitiveType.PII)\n    private String firstName;\n\n    @Sensitive(SensitiveType.PII)\n    private String lastName;\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java b/services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java
+--- a/services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/dto/CreateRefundProcessRequest.java	(date 1791970882783)
+@@ -2,6 +2,7 @@
+ 
+ import com.example.governance.annotations.Sensitive;
+ import com.example.governance.annotations.SensitiveType;
++import java.util.List;
+ import lombok.Data;
+ 
+ @Data
+@@ -13,4 +14,6 @@
+ 
+     @Sensitive(SensitiveType.PII)
+     private String lastName;
++
++    private List<String> taxTypes;
+ }
+Index: services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.dto;\n\nimport com.example.governance.annotations.Sensitive;\nimport com.example.governance.annotations.SensitiveType;\nimport com.example.governance.runtime.SensitivitySupport;\nimport lombok.Data;\n\n@Data\npublic class RefundApplicationStartResponse {\n\n    private String processInstanceId;\n    private String processDefinitionKey;\n\n    @Sensitive(SensitiveType.PII)\n    private String firstName;\n\n    @Sensitive(SensitiveType.PII)\n    private String lastName;\n\n    private String message;\n\n    @Override\n    public String toString() {\n        return SensitivitySupport.sensitiveToString(this);\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java b/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java
+--- a/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationStartResponse.java	(date 1791970883801)
+@@ -3,6 +3,7 @@
+ import com.example.governance.annotations.Sensitive;
+ import com.example.governance.annotations.SensitiveType;
+ import com.example.governance.runtime.SensitivitySupport;
++import java.util.List;
+ import lombok.Data;
+ 
+ @Data
+@@ -17,6 +18,8 @@
+     @Sensitive(SensitiveType.PII)
+     private String lastName;
+ 
++    private List<String> taxTypes;
++
+     private String message;
+ 
+     @Override
+Index: scripts/start-all.sh
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>#!/usr/bin/env bash\n# Start Oracle (Docker) and all Spring Boot microservices, then print governance conformance.\nset -euo pipefail\n\nROOT=\"$(cd \"$(dirname \"$0\")/..\" && pwd)\"\ncd \"$ROOT\"\n\nLOG_DIR=\"${ROOT}/.logs\"\nPID_DIR=\"${LOG_DIR}\"\nmkdir -p \"$LOG_DIR\"\n\nGOVERNANCE_URL=\"${GOVERNANCE_URL:-http://localhost:8081}\"\n\n# Colors (Docker Compose–style). Disabled when not a TTY or NO_COLOR is set.\nif [[ -t 1 && -z \"${NO_COLOR:-}\" ]]; then\n  C_RESET=$'\\033[0m'\n  C_BOLD=$'\\033[1m'\n  C_DIM=$'\\033[2m'\n  C_RED=$'\\033[31m'\n  C_GREEN=$'\\033[32m'\n  C_YELLOW=$'\\033[33m'\n  C_CYAN=$'\\033[36m'\nelse\n  C_RESET='' C_BOLD='' C_DIM='' C_RED='' C_GREEN='' C_YELLOW='' C_CYAN=''\nfi\n\nok()   { printf '%s✔%s %s\\n' \"$C_GREEN\" \"$C_RESET\" \"$*\"; }\nfail() { printf '%s✖%s %s\\n' \"$C_RED\" \"$C_RESET\" \"$*\" >&2; }\nwarn() { printf '%s⚠%s %s\\n' \"$C_YELLOW\" \"$C_RESET\" \"$*\" >&2; }\ninfo() { printf '%s==>%s %s%s%s\\n' \"$C_CYAN\" \"$C_RESET\" \"$C_BOLD\" \"$*\" \"$C_RESET\"; }\nstep() { printf '    %s\\n' \"$*\"; }\ndim()  { printf '    %s%s%s\\n' \"$C_DIM\" \"$*\" \"$C_RESET\"; }\n\nif ! command -v docker >/dev/null 2>&1; then\n  fail \"docker is required (for Oracle).\"\n  exit 1\nfi\n\nMVN=\"\"\nif command -v mvn >/dev/null 2>&1; then\n  MVN=\"mvn\"\nelif [[ -x \"/Applications/IntelliJ IDEA.app/Contents/plugins/maven-plugin/lib/maven3/bin/mvn\" ]]; then\n  MVN=\"/Applications/IntelliJ IDEA.app/Contents/plugins/maven-plugin/lib/maven3/bin/mvn\"\nelse\n  fail \"mvn not found on PATH.\"\n  exit 1\nfi\n\nSERVICES=(\n  \"camunda-service\"\n  \"governance-service\"\n  \"refund-service\"\n  \"taxpayer-service\"\n)\n\n# Wait until Spring has logged startup AND the URL accepts a TCP/HTTP connection.\n# Any HTTP status (including 4xx/5xx) counts as \"up\"; connection refused does not.\nwait_service() {\n  local svc=\"$1\"\n  local url=\"$2\"\n  local attempts=\"${3:-90}\"\n  local log_file=\"${LOG_DIR}/${svc}.log\"\n  local pid_file=\"${PID_DIR}/${svc}.pid\"\n\n  for ((i = 1; i <= attempts; i++)); do\n    if [[ -f \"$pid_file\" ]] && ! kill -0 \"$(cat \"$pid_file\")\" 2>/dev/null; then\n      fail \"${svc} process exited early. Last log lines:\"\n      tail -n 40 \"$log_file\" 2>/dev/null || true\n      return 1\n    fi\n\n    local started=0\n    if [[ -f \"$log_file\" ]] && grep -Eq \"Started .+Application in \" \"$log_file\" 2>/dev/null; then\n      started=1\n    fi\n\n    local code\n    code=\"$(curl -s -o /dev/null -w \"%{http_code}\" --connect-timeout 1 \"$url\" 2>/dev/null || true)\"\n    if [[ -z \"$code\" ]]; then\n      code=\"000\"\n    fi\n\n    if [[ \"$started\" -eq 1 && \"$code\" != \"000\" ]]; then\n      ok \"${svc} is up (HTTP ${code})\"\n      return 0\n    fi\n\n    if ((i % 10 == 0)); then\n      dim \"still waiting for ${svc} (attempt ${i}/${attempts}, http=${code}, started=${started})...\"\n    fi\n    sleep 3\n  done\n\n  fail \"Timed out waiting for ${svc} (${url}). Last log lines:\"\n  tail -n 60 \"$log_file\" 2>/dev/null || true\n  return 1\n}\n\nprint_conformance() {\n  local service=\"$1\"\n  local url=\"${GOVERNANCE_URL}/api/governance/conformance?service=${service}\"\n  echo\n  info \"Governance conformance: ${service}\"\n  if ! body=\"$(curl -sf \"$url\")\"; then\n    fail \"FAILED to call ${url}\"\n    return 1\n  fi\n\n  if command -v python3 >/dev/null 2>&1; then\n    # Pass colors into Python so compliant true/false get green ✔ / red ✖\n    GREEN=\"$C_GREEN\" RED=\"$C_RED\" RESET=\"$C_RESET\" DIM=\"$C_DIM\" \\\n    python3 - \"$body\" <<'PY'\nimport json, os, sys\n\nraw = sys.argv[1]\nreport = json.loads(raw)\nok = bool(report.get(\"compliant\"))\ngreen = os.environ.get(\"GREEN\", \"\")\nred = os.environ.get(\"RED\", \"\")\nreset = os.environ.get(\"RESET\", \"\")\ndim = os.environ.get(\"DIM\", \"\")\n\nif ok:\n    print(f\"    compliant: {green}✔ true{reset}\")\nelse:\n    print(f\"    compliant: {red}✖ false{reset}\")\n\nissues = report.get(\"issues\") or []\nif not issues:\n    print(f\"    issues: {dim}(none){reset}\")\nelse:\n    print(f\"    issues ({len(issues)}):\")\n    for issue in issues:\n        entity = issue.get(\"entityName\") or \"\"\n        field = issue.get(\"fieldName\")\n        loc = f\"{entity}.{field}\" if field else entity\n        rule = issue.get(\"rule\") or \"?\"\n        msg = issue.get(\"message\") or \"\"\n        print(f\"      {red}✖{reset} [{rule}] {loc}: {msg}\")\nsys.exit(0 if ok else 2)\nPY\n  else\n    step \"${body}\"\n  fi\n}\n\nCOMPOSE=(docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml)\n\ninfo \"Starting Oracle + OpenMetadata...\"\n\"${COMPOSE[@]}\" up -d oracle openmetadata-mysql openmetadata-elasticsearch openmetadata-migrate openmetadata-server\n\ninfo \"Waiting for Oracle to become healthy...\"\nATTEMPTS=60\nfor ((i = 1; i <= ATTEMPTS; i++)); do\n  status=\"$(docker inspect --format='{{.State.Health.Status}}' camunda-tutorial-oracle 2>/dev/null || echo starting)\"\n  if [[ \"$status\" == \"healthy\" ]]; then\n    ok \"Oracle is healthy\"\n    break\n  fi\n  if ((i == ATTEMPTS)); then\n    fail \"Oracle did not become healthy in time (last status: ${status}).\"\n    echo \"Check: docker compose logs oracle\" >&2\n    exit 1\n  fi\n  if ((i % 6 == 0)); then\n    dim \"Oracle status: ${status} (attempt ${i}/${ATTEMPTS})...\"\n  fi\n  sleep 5\ndone\n\ninfo \"Waiting for OpenMetadata API...\"\nOM_ATTEMPTS=90\nfor ((i = 1; i <= OM_ATTEMPTS; i++)); do\n  om_code=\"$(curl -s -o /dev/null -w \"%{http_code}\" --connect-timeout 2 http://localhost:8585/api/v1/system/version 2>/dev/null || true)\"\n  if [[ \"$om_code\" == \"200\" ]]; then\n    ok \"OpenMetadata is up (HTTP ${om_code})\"\n    break\n  fi\n  if ((i == OM_ATTEMPTS)); then\n    warn \"OpenMetadata not ready (last HTTP ${om_code}). Governance registry checks may fail until it is up.\"\n    warn \"Check: docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml logs openmetadata-server\"\n    break\n  fi\n  if ((i % 6 == 0)); then\n    dim \"OpenMetadata status http=${om_code} (attempt ${i}/${OM_ATTEMPTS})...\"\n  fi\n  sleep 5\ndone\n\ninfo \"Checking service schemas...\"\nif ! \"${COMPOSE[@]}\" exec -T oracle bash -lc \\\n  'sqlplus -s refund_service/Refund_Pass_1@//localhost:1521/FREEPDB1 <<EOF\nWHENEVER SQLERROR EXIT FAILURE\nSELECT 1 FROM dual;\nEXIT;\nEOF' >/dev/null 2>&1; then\n  warn \"Schemas not ready yet — applying CREATE SESSION grants...\"\n  \"${COMPOSE[@]}\" exec -T oracle bash -lc 'sqlplus -s sys/Oracle_Pass_1@//localhost:1521/FREE as sysdba <<EOF\nALTER SESSION SET CONTAINER = FREEPDB1;\nGRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,\n      CREATE TABLE, CREATE TRIGGER, CREATE TYPE TO camunda_service;\nGRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,\n      CREATE TABLE, CREATE TRIGGER TO governance_service;\nGRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,\n      CREATE TABLE, CREATE TRIGGER TO refund_service;\nGRANT CREATE SESSION, CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE,\n      CREATE TABLE, CREATE TRIGGER TO taxpayer_service;\nEXIT;\nEOF' >/dev/null\n  ok \"CREATE SESSION grants applied\"\nelse\n  ok \"Service schemas reachable\"\nfi\n\ninfo \"Building modules...\"\n\"$MVN\" -q -DskipTests package\nok \"Maven package complete\"\n\ninfo \"Starting services...\"\nfor svc in \"${SERVICES[@]}\"; do\n  pid_file=\"${PID_DIR}/${svc}.pid\"\n  log_file=\"${LOG_DIR}/${svc}.log\"\n\n  if [[ -f \"$pid_file\" ]] && kill -0 \"$(cat \"$pid_file\")\" 2>/dev/null; then\n    ok \"${svc} already running (pid $(cat \"$pid_file\"))\"\n    continue\n  fi\n\n  rm -f \"$pid_file\"\n\n  # Truncate log so \"Started ...\" detection refers to this run\n  : >\"$log_file\"\n\n  nohup \"$MVN\" -pl \"services/${svc}\" -am spring-boot:run \\\n    >\"$log_file\" 2>&1 &\n  echo $! >\"$pid_file\"\n  step \"${svc} starting (pid $(cat \"$pid_file\"), log ${log_file})\"\ndone\n\ninfo \"Waiting for services (Maven boot can take a few minutes)...\"\nwait_service \"governance-service\" \"${GOVERNANCE_URL}/api/governance/naming-domains\"\nwait_service \"refund-service\" \"http://localhost:8082/api/refund-applications\"\nwait_service \"taxpayer-service\" \"http://localhost:8083/api/taxpayer-registrations\"\n# Catalog publish happens on domain-service ApplicationRunner after start.\nsleep 3\n\nCONFORM_FAILED=0\nprint_conformance \"refund-service\" || CONFORM_FAILED=1\nprint_conformance \"taxpayer-service\" || CONFORM_FAILED=1\n\necho\ninfo \"Done. Endpoints:\"\nstep \"Camunda        http://localhost:8080  (demo/demo)\"\nstep \"OpenMetadata   http://localhost:8585  (admin/admin)\"\nstep \"Governance     ${GOVERNANCE_URL}/api/governance/tables\"\nstep \"Asset resolve  ${GOVERNANCE_URL}/api/governance/assets/refunds.application\"\nstep \"Conformance    ${GOVERNANCE_URL}/api/governance/conformance?service=refund-service\"\nstep \"OM webhook     ${GOVERNANCE_URL}/api/governance/webhooks/openmetadata\"\nstep \"Refunds        http://localhost:8082/api/refund-applications\"\nstep \"Taxpayer       http://localhost:8083/api/taxpayer-registrations\"\necho\ndim \"Logs:  ${LOG_DIR}/\"\ndim \"Stop:  scripts/stop-all.sh [--with-db]\"\n\nif [[ \"$CONFORM_FAILED\" -ne 0 ]]; then\n  echo\n  warn \"one or more services are not governance-compliant (see above).\"\n  exit 2\nfi\n\nok \"All services governance-compliant\"\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/scripts/start-all.sh b/scripts/start-all.sh
+--- a/scripts/start-all.sh	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/scripts/start-all.sh	(date 1791957403390)
+@@ -1,5 +1,6 @@
+ #!/usr/bin/env bash
+-# Start Oracle (Docker) and all Spring Boot microservices, then print governance conformance.
++# Start Oracle (Docker) and all Spring Boot microservices, then print governance
++# conformance and Bean Validation constraints sniffed from @Valid request DTOs.
+ set -euo pipefail
+ 
+ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+@@ -144,6 +145,59 @@
+   fi
+ }
+ 
++# Bean Validation constraints sniffed from @Valid @RequestBody DTOs at domain startup.
++print_validations() {
++  local service="$1"
++  local url="${GOVERNANCE_URL}/api/governance/validations?service=${service}"
++  echo
++  info "Request validations sniffed: ${service}"
++  dim "Source: @Valid @RequestBody DTOs → id {service}.{Dto}.{field}.{Constraint}"
++  if ! body="$(curl -sf "$url")"; then
++    fail "FAILED to call ${url}"
++    return 1
++  fi
++
++  if command -v python3 >/dev/null 2>&1; then
++    GREEN="$C_GREEN" RESET="$C_RESET" DIM="$C_DIM" CYAN="$C_CYAN" \
++    python3 - "$body" <<'PY'
++import json, os, sys
++
++rows = json.loads(sys.argv[1])
++green = os.environ.get("GREEN", "")
++reset = os.environ.get("RESET", "")
++dim = os.environ.get("DIM", "")
++cyan = os.environ.get("CYAN", "")
++
++if not rows:
++    sys.exit(0)
++
++print(f"    count: {green}{len(rows)}{reset}")
++for row in rows:
++    vid = row.get("validationId") or "?"
++    field = row.get("fieldName") or ""
++    constraint = row.get("constraintName") or ""
++    path = row.get("requestPath") or ""
++    method = row.get("httpMethod") or ""
++    msg = row.get("message") or ""
++    where = f"{method} {path}".strip()
++    detail = f"{field}.{constraint}" if field and constraint else constraint or field
++    print(f"      {cyan}•{reset} {vid}")
++    extra = []
++    if where:
++        extra.append(where)
++    if detail:
++        extra.append(detail)
++    if msg:
++        extra.append(msg)
++    if extra:
++        print(f"        {dim}{' | '.join(extra)}{reset}")
++sys.exit(0)
++PY
++  else
++    step "${body}"
++  fi
++}
++
+ COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.openmetadata.yml)
+ 
+ info "Starting Oracle + OpenMetadata..."
+@@ -248,17 +302,24 @@
+ print_conformance "refund-service" || CONFORM_FAILED=1
+ print_conformance "taxpayer-service" || CONFORM_FAILED=1
+ 
++print_validations "refund-service" || true
++print_validations "taxpayer-service" || true
++
+ echo
+ info "Done. Endpoints:"
+ step "Camunda        http://localhost:8080  (demo/demo)"
+ step "OpenMetadata   http://localhost:8585  (admin/admin)"
+ step "Governance     ${GOVERNANCE_URL}/api/governance/tables"
++step "Validations    ${GOVERNANCE_URL}/api/governance/validations"
++step "  (sniffed BV) ${GOVERNANCE_URL}/api/governance/validations?service=refund-service"
+ step "Asset resolve  ${GOVERNANCE_URL}/api/governance/assets/refunds.application"
+ step "Conformance    ${GOVERNANCE_URL}/api/governance/conformance?service=refund-service"
+ step "OM webhook     ${GOVERNANCE_URL}/api/governance/webhooks/openmetadata"
+ step "Refunds        http://localhost:8082/api/refund-applications"
+ step "Taxpayer       http://localhost:8083/api/taxpayer-registrations"
+ echo
++dim "Validation sniffing: domain services scan @Valid request DTOs at startup and sync"
++dim "  ids like refund-service.RefundApplicationRequest.firstName.NotBlank"
+ dim "Logs:  ${LOG_DIR}/"
+ dim "Stop:  scripts/stop-all.sh [--with-db]"
+ 
+Index: services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.dto;\n\nimport com.example.governance.annotations.Sensitive;\nimport com.example.governance.annotations.SensitiveType;\nimport com.example.governance.runtime.SensitivitySupport;\nimport java.time.Instant;\nimport lombok.Data;\n\n@Data\npublic class RefundApplicationResponse {\n\n    private Long id;\n    private String applicationId;\n    private String processInstanceId;\n\n    @Sensitive(SensitiveType.PII)\n    private String firstName;\n\n    @Sensitive(SensitiveType.PII)\n    private String lastName;\n\n    private String drn;\n    private String station;\n    private String riskLevel;\n    private Boolean approved;\n    private String status;\n\n    @Sensitive(SensitiveType.PII)\n    private String reviewComment;\n\n    @Sensitive(SensitiveType.PII)\n    private String notificationMessage;\n\n    private String decision;\n    private Instant createdAt;\n    private Instant updatedAt;\n\n    @Override\n    public String toString() {\n        return SensitivitySupport.sensitiveToString(this);\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java b/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java
+--- a/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/dto/RefundApplicationResponse.java	(date 1791970887192)
+@@ -4,6 +4,7 @@
+ import com.example.governance.annotations.SensitiveType;
+ import com.example.governance.runtime.SensitivitySupport;
+ import java.time.Instant;
++import java.util.List;
+ import lombok.Data;
+ 
+ @Data
+@@ -19,6 +20,8 @@
+     @Sensitive(SensitiveType.PII)
+     private String lastName;
+ 
++    private List<String> taxTypes;
++
+     private String drn;
+     private String station;
+     private String riskLevel;
+Index: services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.service;\n\nimport com.example.refund.dto.CreateRefundProcessRequest;\nimport com.example.refund.dto.NotifyRefundRequest;\nimport com.example.refund.dto.RefundProcessStepResponse;\nimport com.example.refund.entity.RefundApplicationEntity;\nimport com.example.refund.repository.RefundApplicationRepository;\nimport java.time.Instant;\nimport java.util.List;\nimport java.util.UUID;\nimport java.util.concurrent.ThreadLocalRandom;\nimport java.util.function.Consumer;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\nimport org.springframework.web.server.ResponseStatusException;\n\n@Service\npublic class RefundApplicationService {\n\n    private static final List<String> STATIONS = List.of(\n            \"STATION-NORTH\", \"STATION-SOUTH\", \"STATION-EAST\", \"STATION-WEST\", \"STATION-HQ\"\n    );\n    private static final List<String> RISK_LEVELS = List.of(\"low\", \"medium\", \"high\");\n\n    private final RefundApplicationRepository repository;\n\n    public RefundApplicationService(RefundApplicationRepository repository) {\n        this.repository = repository;\n    }\n\n    @Transactional\n    public RefundProcessStepResponse createFromProcess(CreateRefundProcessRequest request) {\n        String applicationId = \"REF-\" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();\n        Instant now = Instant.now();\n        RefundApplicationEntity entity = new RefundApplicationEntity();\n        entity.setApplicationId(applicationId);\n        entity.setProcessInstanceId(request.getProcessInstanceId());\n        entity.setFirstName(request.getFirstName());\n        entity.setLastName(request.getLastName());\n        entity.setStatus(\"CREATED\");\n        entity.setCreatedAt(now);\n        entity.setUpdatedAt(now);\n        repository.save(entity);\n\n        RefundProcessStepResponse response = new RefundProcessStepResponse();\n        response.setApplicationId(applicationId);\n        response.setApplicationStatus(\"CREATED\");\n        response.setCreatedAt(now.toString());\n        return response;\n    }\n\n    @Transactional\n    public RefundProcessStepResponse assignDrnAndStation(String applicationId) {\n        int sequence = ThreadLocalRandom.current().nextInt(100000, 999999);\n        String drn = \"DRN-\" + sequence;\n        String station = STATIONS.get(ThreadLocalRandom.current().nextInt(STATIONS.size()));\n        update(applicationId, entity -> {\n            entity.setDrn(drn);\n            entity.setStation(station);\n            entity.setStatus(\"ASSIGNED\");\n        });\n        RefundProcessStepResponse response = new RefundProcessStepResponse();\n        response.setApplicationId(applicationId);\n        response.setDrn(drn);\n        response.setStation(station);\n        response.setApplicationStatus(\"ASSIGNED\");\n        return response;\n    }\n\n    @Transactional\n    public RefundProcessStepResponse checkRisk(String applicationId) {\n        String riskLevel = RISK_LEVELS.get(ThreadLocalRandom.current().nextInt(RISK_LEVELS.size()));\n        String status = \"low\".equals(riskLevel) ? \"RISK_CHECKED\" : \"PENDING_REVIEW\";\n        update(applicationId, entity -> {\n            entity.setRiskLevel(riskLevel);\n            entity.setStatus(status);\n        });\n        RefundProcessStepResponse response = new RefundProcessStepResponse();\n        response.setApplicationId(applicationId);\n        response.setRiskLevel(riskLevel);\n        response.setApplicationStatus(status);\n        return response;\n    }\n\n    @Transactional\n    public RefundProcessStepResponse autoApprove(String applicationId) {\n        String reviewComment = \"Automatically approved due to low risk level\";\n        update(applicationId, entity -> {\n            entity.setApproved(true);\n            entity.setReviewComment(reviewComment);\n            entity.setStatus(\"AUTO_APPROVED\");\n        });\n        RefundProcessStepResponse response = new RefundProcessStepResponse();\n        response.setApplicationId(applicationId);\n        response.setApproved(true);\n        response.setReviewComment(reviewComment);\n        response.setApplicationStatus(\"AUTO_APPROVED\");\n        return response;\n    }\n\n    @Transactional\n    public RefundProcessStepResponse notifyTaxpayer(String applicationId, NotifyRefundRequest request) {\n        String decision = request.isApproved() ? \"APPROVED\" : \"REJECTED\";\n        String reviewComment = request.getReviewComment() == null ? \"\" : request.getReviewComment();\n        String message = request.isApproved()\n                ? \"Dear %s %s, your refund application %s (DRN %s, station %s) has been APPROVED. %s\"\n                .formatted(request.getFirstName(), request.getLastName(), applicationId,\n                        request.getDrn(), request.getStation(), reviewComment)\n                : \"Dear %s %s, your refund application %s (DRN %s, station %s) has been REJECTED. %s\"\n                .formatted(request.getFirstName(), request.getLastName(), applicationId,\n                        request.getDrn(), request.getStation(), reviewComment);\n\n        update(applicationId, entity -> {\n            entity.setApproved(request.isApproved());\n            entity.setReviewComment(reviewComment);\n            entity.setNotificationMessage(message);\n            entity.setDecision(decision);\n            entity.setStatus(decision);\n        });\n\n        RefundProcessStepResponse response = new RefundProcessStepResponse();\n        response.setApplicationId(applicationId);\n        response.setNotificationMessage(message);\n        response.setApplicationStatus(decision);\n        response.setDecision(decision);\n        return response;\n    }\n\n    @Transactional\n    public RefundApplicationEntity update(String applicationId, Consumer<RefundApplicationEntity> changes) {\n        RefundApplicationEntity entity = repository.findByApplicationId(applicationId)\n                .orElseThrow(() -> new IllegalStateException(\"Refund application not found: \" + applicationId));\n        changes.accept(entity);\n        entity.setUpdatedAt(Instant.now());\n        return repository.save(entity);\n    }\n\n    @Transactional(readOnly = true)\n    public List<RefundApplicationEntity> findAll() {\n        return repository.findAll();\n    }\n\n    @Transactional(readOnly = true)\n    public RefundApplicationEntity getByApplicationId(String applicationId) {\n        return repository.findByApplicationId(applicationId)\n                .orElseThrow(() -> new ResponseStatusException(\n                        HttpStatus.NOT_FOUND,\n                        \"Refund application not found: \" + applicationId\n                ));\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java b/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java
+--- a/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/service/RefundApplicationService.java	(date 1791970902534)
+@@ -38,6 +38,7 @@
+         entity.setProcessInstanceId(request.getProcessInstanceId());
+         entity.setFirstName(request.getFirstName());
+         entity.setLastName(request.getLastName());
++        entity.setTaxTypes(request.getTaxTypes() == null ? List.of() : List.copyOf(request.getTaxTypes()));
+         entity.setStatus("CREATED");
+         entity.setCreatedAt(now);
+         entity.setUpdatedAt(now);
+@@ -47,6 +48,7 @@
+         response.setApplicationId(applicationId);
+         response.setApplicationStatus("CREATED");
+         response.setCreatedAt(now.toString());
++        response.setTaxTypes(entity.getTaxTypes());
+         return response;
+     }
+ 
+Index: services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.refund.dto;\n\nimport lombok.Data;\n\n@Data\npublic class RefundProcessStepResponse {\n    private String applicationId;\n    private String applicationStatus;\n    private String createdAt;\n    private String drn;\n    private String station;\n    private String riskLevel;\n    private Boolean approved;\n    private String reviewComment;\n    private String notificationMessage;\n    private String decision;\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java b/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java
+--- a/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/services/refund-service/src/main/java/com/example/refund/dto/RefundProcessStepResponse.java	(date 1791970889719)
+@@ -1,5 +1,6 @@
+ package com.example.refund.dto;
+ 
++import java.util.List;
+ import lombok.Data;
+ 
+ @Data
+@@ -7,6 +8,7 @@
+     private String applicationId;
+     private String applicationStatus;
+     private String createdAt;
++    private List<String> taxTypes;
+     private String drn;
+     private String station;
+     private String riskLevel;
+Index: libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceSyncRequest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.governance.runtime.catalog;\n\nimport java.util.List;\n\npublic record GovernanceSyncRequest(String serviceName, List<GovernanceAssetDto> assets) {\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceSyncRequest.java b/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceSyncRequest.java
+--- a/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceSyncRequest.java	(revision 5a1ef0445ffb75deb3db383eb324ef846be8f3e1)
++++ b/libs/governance-runtime/src/main/java/com/example/governance/runtime/catalog/GovernanceSyncRequest.java	(date 1791956228418)
+@@ -2,5 +2,17 @@
+ 
+ import java.util.List;
+ 
+-public record GovernanceSyncRequest(String serviceName, List<GovernanceAssetDto> assets) {
++public record GovernanceSyncRequest(
++        String serviceName,
++        List<GovernanceAssetDto> assets,
++        List<GovernanceValidationDto> validations
++) {
++    public GovernanceSyncRequest {
++        assets = assets == null ? List.of() : assets;
++        validations = validations == null ? List.of() : validations;
++    }
++
++    public GovernanceSyncRequest(String serviceName, List<GovernanceAssetDto> assets) {
++        this(serviceName, assets, List.of());
++    }
+ }
