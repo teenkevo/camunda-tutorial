@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Declares the business data domain of a field (or legacy entity). Prefer {@link DataGovernance} on types.
+ * Declares the business data domain of a field. Prefer {@link Domain} on entity types.
  */
 @Documented
 @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD})

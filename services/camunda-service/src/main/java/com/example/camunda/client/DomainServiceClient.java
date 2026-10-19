@@ -10,24 +10,31 @@ public class DomainServiceClient {
 
     private final RestTemplate restTemplate;
     private final String refundBaseUrl;
-    private final String taxpayerBaseUrl;
+    private final String registrationBaseUrl;
+    private final String documentBaseUrl;
 
     public DomainServiceClient(
             RestTemplate restTemplate,
             @Value("${app.services.refund-base-url}") String refundBaseUrl,
-            @Value("${app.services.taxpayer-base-url}") String taxpayerBaseUrl
+            @Value("${app.services.registration-base-url}") String registrationBaseUrl,
+            @Value("${app.services.document-base-url}") String documentBaseUrl
     ) {
         this.restTemplate = restTemplate;
         this.refundBaseUrl = trim(refundBaseUrl);
-        this.taxpayerBaseUrl = trim(taxpayerBaseUrl);
+        this.registrationBaseUrl = trim(registrationBaseUrl);
+        this.documentBaseUrl = trim(documentBaseUrl);
     }
 
     public Map<?, ?> postRefund(String path, Object body) {
         return restTemplate.postForObject(refundBaseUrl + path, body, Map.class);
     }
 
-    public Map<?, ?> postTaxpayer(String path, Object body) {
-        return restTemplate.postForObject(taxpayerBaseUrl + path, body, Map.class);
+    public Map<?, ?> postRegistration(String path, Object body) {
+        return restTemplate.postForObject(registrationBaseUrl + path, body, Map.class);
+    }
+
+    public Map<?, ?> postDocument(String path, Object body) {
+        return restTemplate.postForObject(documentBaseUrl + path, body, Map.class);
     }
 
     private static String trim(String url) {

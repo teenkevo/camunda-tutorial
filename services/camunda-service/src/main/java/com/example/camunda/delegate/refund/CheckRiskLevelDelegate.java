@@ -17,9 +17,9 @@ public class CheckRiskLevelDelegate implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) {
-        String applicationId = String.valueOf(execution.getVariable("applicationId"));
+        String drn = String.valueOf(execution.getVariable("drn"));
         Map<?, ?> result = domainServiceClient.postRefund(
-                "/internal/refund-process/" + applicationId + "/check-risk",
+                "/internal/refund-process/" + drn + "/check-risk",
                 Map.of()
         );
         execution.setVariable("riskLevel", result.get("riskLevel"));

@@ -21,5 +21,14 @@ public class GovernanceCatalogProperties {
 
     /** Fail startup when conformance report is non-compliant. */
     private boolean failOnNonCompliant = false;
+
+    /**
+     * How many times to retry catalog sync when governance-service is not reachable yet
+     * (common when domain services boot in parallel).
+     */
+    private int syncMaxAttempts = 30;
+
+    /** Delay between sync retry attempts. */
+    private long syncRetryDelayMs = 2000L;
 }
 

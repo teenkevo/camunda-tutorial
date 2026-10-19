@@ -17,9 +17,9 @@ public class AutoApproveDelegate implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) {
-        String applicationId = String.valueOf(execution.getVariable("applicationId"));
+        String drn = String.valueOf(execution.getVariable("drn"));
         Map<?, ?> result = domainServiceClient.postRefund(
-                "/internal/refund-process/" + applicationId + "/auto-approve",
+                "/internal/refund-process/" + drn + "/auto-approve",
                 Map.of()
         );
         execution.setVariable("approved", result.get("approved"));

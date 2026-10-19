@@ -3,11 +3,13 @@ package com.example.refund.dto;
 import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
+import java.util.List;
 import lombok.Data;
 
 @Data
 public class RefundApplicationStartResponse {
 
+    private String drn;
     private String processInstanceId;
     private String processDefinitionKey;
 
@@ -16,6 +18,8 @@ public class RefundApplicationStartResponse {
 
     @Sensitive(SensitiveType.PII)
     private String lastName;
+
+    private List<String> taxTypes;
 
     private String message;
 

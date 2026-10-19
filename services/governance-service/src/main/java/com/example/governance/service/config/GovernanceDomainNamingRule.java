@@ -16,7 +16,7 @@ public class GovernanceDomainNamingRule {
     /** Optional human-readable label. */
     private String label;
 
-    /** Required physical table prefix, e.g. {@code REG_} or {@code RFND_}. */
+    /** Required physical table prefix, e.g. {@code REGISTRATION_} or {@code REFUND_}. */
     private String tablePrefix;
 
     /**

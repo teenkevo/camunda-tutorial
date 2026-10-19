@@ -23,17 +23,20 @@ public class GovernanceMetadataPublisher implements ApplicationRunner {
 
     private final GovernanceCatalogProperties properties;
     private final GovernanceMetadataScanner scanner;
+    private final GovernanceRequestValidationScanner validationScanner;
     private final GovernanceCatalogClient client;
     private final Environment environment;
 
     public GovernanceMetadataPublisher(
             GovernanceCatalogProperties properties,
             GovernanceMetadataScanner scanner,
+            GovernanceRequestValidationScanner validationScanner,
             GovernanceCatalogClient client,
             Environment environment
     ) {
         this.properties = properties;
         this.scanner = scanner;
+        this.validationScanner = validationScanner;
         this.client = client;
         this.environment = environment;
     }
@@ -43,12 +46,19 @@ public class GovernanceMetadataPublisher implements ApplicationRunner {
         String serviceName = properties.getServiceName();
         Set<String> packages = scanPackages();
         List<GovernanceAssetDto> assets = scanner.scan(serviceName, packages);
-        if (assets.isEmpty()) {
-            log.info("No governance-annotated entities found in {}", packages);
+        List<GovernanceValidationDto> validations = validationScanner.scan(serviceName, packages);
+        if (assets.isEmpty() && validations.isEmpty()) {
+            log.info("No governance assets or request validations found in {}", packages);
             return;
         }
+        log.info(
+                "Publishing {} assets and {} request validations for {}",
+                assets.size(),
+                validations.size(),
+                serviceName
+        );
 
-        client.syncSafe(new GovernanceSyncRequest(serviceName, assets));
+        client.syncSafe(new GovernanceSyncRequest(serviceName, assets, validations));
 
         try {
             ConformanceReport report = client.conformance(serviceName);

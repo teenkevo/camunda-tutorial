@@ -14,6 +14,7 @@ public class NotifyRefundRequest {
     private String lastName;
 
     private String drn;
+
     private String station;
     private boolean approved;
 

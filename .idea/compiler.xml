@@ -18,10 +18,11 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.48/lombok-1.18.48.jar" />
         </processorPath>
         <module name="governance-service" />
-        <module name="taxpayer-service" />
+        <module name="registration-service" />
         <module name="camunda-service" />
         <module name="governance-runtime" />
         <module name="refund-service" />
+        <module name="document-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -32,11 +33,12 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="camunda-client" options="-parameters" />
       <module name="camunda-service" options="-parameters" />
+      <module name="document-service" options="-parameters" />
       <module name="governance-annotations" options="-parameters" />
       <module name="governance-runtime" options="-parameters" />
       <module name="governance-service" options="-parameters" />
       <module name="refund-service" options="-parameters" />
-      <module name="taxpayer-service" options="-parameters" />
+      <module name="registration-service" options="-parameters" />
     </option>
   </component>
 </project>

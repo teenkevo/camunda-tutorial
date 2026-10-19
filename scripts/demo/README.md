@@ -5,7 +5,7 @@ Reusable helpers for live demos. Shared colors / compose wiring live in `lib.sh`
 | Script | Purpose |
 |--------|---------|
 | [`reset-openmetadata.sh`](reset-openmetadata.sh) | Wipe OpenMetadata volumes and restart a clean catalog (Oracle untouched) |
-| [`inject-refund-missing-application-id.sh`](inject-refund-missing-application-id.sh) | Plant a null `APPLICATION_ID` row on `RFND_APPL` for DQ demos; prints inspection SQL |
+| [`inject-refund-missing-application-id.sh`](inject-refund-missing-application-id.sh) | Plant a null `DRN` row on `DOCUMENT_RECORD` for DQ demos; prints inspection SQL |
 
 ```bash
 # Interactive confirm

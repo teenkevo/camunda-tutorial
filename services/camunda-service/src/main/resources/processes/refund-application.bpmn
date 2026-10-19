@@ -14,12 +14,12 @@
       <bpmn:outgoing>Flow_to_create</bpmn:outgoing>
     </bpmn:startEvent>
 
-    <bpmn:serviceTask id="CreateApplication" name="Create application" camunda:delegateExpression="${createApplicationDelegate}">
+    <bpmn:serviceTask id="CreateApplication" name="Create refund document" camunda:delegateExpression="${createRefundDocumentDelegate}">
       <bpmn:incoming>Flow_to_create</bpmn:incoming>
       <bpmn:outgoing>Flow_to_set_drn</bpmn:outgoing>
     </bpmn:serviceTask>
 
-    <bpmn:serviceTask id="SetDrnAndStation" name="Set DRN and station" camunda:delegateExpression="${setDrnAndStationDelegate}">
+    <bpmn:serviceTask id="SetDrnAndStation" name="Assign station" camunda:delegateExpression="${setDrnAndStationDelegate}">
       <bpmn:incoming>Flow_to_set_drn</bpmn:incoming>
       <bpmn:outgoing>Flow_to_check_risk</bpmn:outgoing>
     </bpmn:serviceTask>

@@ -4,13 +4,14 @@ import com.example.governance.annotations.Sensitive;
 import com.example.governance.annotations.SensitiveType;
 import com.example.governance.runtime.SensitivitySupport;
 import java.time.Instant;
+import java.util.List;
 import lombok.Data;
 
 @Data
 public class RefundApplicationResponse {
 
     private Long id;
-    private String applicationId;
+    private String drn;
     private String processInstanceId;
 
     @Sensitive(SensitiveType.PII)
@@ -19,7 +20,8 @@ public class RefundApplicationResponse {
     @Sensitive(SensitiveType.PII)
     private String lastName;
 
-    private String drn;
+    private List<String> taxTypes;
+
     private String station;
     private String riskLevel;
     private Boolean approved;
@@ -34,6 +36,7 @@ public class RefundApplicationResponse {
     private String decision;
     private Instant createdAt;
     private Instant updatedAt;
+    private String refundApplicationAud;
 
     @Override
     public String toString() {

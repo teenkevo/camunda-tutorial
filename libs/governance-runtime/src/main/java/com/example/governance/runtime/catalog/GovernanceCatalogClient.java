@@ -26,9 +26,19 @@ public class GovernanceCatalogClient {
     public void sync(GovernanceSyncRequest request) {
         String url = trimSlash(properties.getBaseUrl()) + "/api/governance/sync";
         restTemplate.postForObject(url, request, GovernanceAssetDto[].class);
-        log.info("Published {} governance assets for service {}",
+        log.info("Published {} governance assets and {} validations for service {}",
                 request.assets() == null ? 0 : request.assets().size(),
+                request.validations() == null ? 0 : request.validations().size(),
                 request.serviceName());
+    }
+
+    public List<GovernanceValidationDto> listValidations(String serviceName) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(trimSlash(properties.getBaseUrl()) + "/api/governance/validations")
+                .queryParam("service", serviceName)
+                .toUriString();
+        GovernanceValidationDto[] body = restTemplate.getForObject(url, GovernanceValidationDto[].class);
+        return body == null ? List.of() : Arrays.asList(body);
     }
 
     public ConformanceReport conformance(String serviceName) {
@@ -53,14 +63,41 @@ public class GovernanceCatalogClient {
     }
 
     public void syncSafe(GovernanceSyncRequest request) {
-        try {
-            sync(request);
-        } catch (RestClientException ex) {
-            if (properties.isFailOnError()) {
-                throw ex;
+        int maxAttempts = Math.max(1, properties.getSyncMaxAttempts());
+        long delayMs = Math.max(100L, properties.getSyncRetryDelayMs());
+        RestClientException last = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                sync(request);
+                return;
+            } catch (RestClientException ex) {
+                last = ex;
+                if (attempt == maxAttempts) {
+                    break;
+                }
+                log.warn(
+                        "Governance catalog sync attempt {}/{} failed (retrying in {}ms): {}",
+                        attempt,
+                        maxAttempts,
+                        delayMs,
+                        ex.getMessage()
+                );
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
-            log.warn("Governance catalog sync failed (continuing): {}", ex.getMessage());
         }
+        if (properties.isFailOnError() && last != null) {
+            throw last;
+        }
+        log.warn(
+                "Governance catalog sync failed after {} attempt(s) (continuing): {}",
+                maxAttempts,
+                last == null ? "unknown" : last.getMessage()
+        );
     }
 
     private static String trimSlash(String baseUrl) {
