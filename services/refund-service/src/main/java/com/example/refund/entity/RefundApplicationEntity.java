@@ -26,6 +26,7 @@ import org.hibernate.annotations.Comment;
 @Data
 @Entity
 @EntityListeners(AuditTrailListener.class)
+@Domain("refunds")
 @Table(
         name = "REFUND_APPLICATION",
         uniqueConstraints = @UniqueConstraint(
@@ -33,7 +34,6 @@ import org.hibernate.annotations.Comment;
                 columnNames = {"drn"}
         )
 )
-@Domain("refunds")
 @Comment("Refund application business record, keyed by the document DRN")
 public class RefundApplicationEntity implements Audited {
 
